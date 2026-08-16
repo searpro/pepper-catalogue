@@ -393,6 +393,88 @@
       ]
     },
     {
+      "id": "minimax-h3-ref2va",
+      "kind": "video",
+      "name": "MiniMax-H3 Ref2VA",
+      "description": "Joint audio-video generation with reference conditioning. Takes a reference image and a reference audio track, and generates video with its own decoded stereo soundtrack. The audio conditions the result; it is not lip-synced to it.",
+      "reference": "https://github.com/leejet/stable-diffusion.cpp/blob/master/docs/minimax_h3.md",
+      "tags": ["minimax", "s2v", "audio-video", "reference"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "capabilities": ["s2v"],
+      "s2v": {
+        "audio_flag": "--ref-audio",
+        "chain_flag": "-r",
+        "frames_per_chunk": 90,
+        "chunk_seconds": 3.75,
+        "overlap_seconds": 0.5,
+        "sample_rate": 32000,
+        "frame_grid": { "stride": 17, "offset": 5 }
+      },
+      "defaults": {
+        "steps": 20,
+        "cfg_scale": 1,
+        "width": 864,
+        "height": 480,
+        "sampler": "euler",
+        "fps": 24,
+        "flow_shift": 12
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--rng", "cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model (Ref2VA)",
+          "description": "The packed audio-video diffusion transformer.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/MiniMax-H3-GGUF",
+            "match": "ref2va",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen3-VL-32B text encoder",
+          "description": "The MiniMax-H3 variant, truncated to 50 language layers. A stock Qwen3-VL will not load.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/MiniMax-H3-GGUF",
+            "match": "qwen3vl",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Video VAE",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/MiniMax-H3",
+            "path": "vae",
+            "match": "video_vae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Audio VAE",
+          "description": "Decodes the generated soundtrack. Without it the model still runs, but the video is silent.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/MiniMax-H3",
+            "path": "vae",
+            "match": "audio_vae",
+            "extensions": [".safetensors"]
+          }
+        }
+      ]
+    },
+    {
       "id": "qwen3-8b",
       "kind": "llm",
       "name": "Qwen3 8B",
