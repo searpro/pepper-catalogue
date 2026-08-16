@@ -393,6 +393,88 @@
       ]
     },
     {
+      "id": "wan2.2-s2v-14b",
+      "kind": "video",
+      "name": "Wan 2.2 S2V 14B",
+      "description": "Speech-to-video. Drives a speaker from an audio track and a reference portrait, generating lip-synced video. Long audio is rendered in chunks and joined.",
+      "reference": "https://huggingface.co/Wan-AI/Wan2.2-S2V-14B",
+      "tags": ["wan", "s2v", "speech-to-video", "lip-sync"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "capabilities": ["s2v"],
+      "s2v": {
+        "audio_flag": "--ref-audio",
+        "chain_flag": "-i",
+        "frames_per_chunk": 81,
+        "chunk_seconds": 5,
+        "overlap_seconds": 0.5,
+        "sample_rate": 16000
+      },
+      "defaults": {
+        "steps": 20,
+        "cfg_scale": 4.5,
+        "width": 832,
+        "height": 480,
+        "sampler": "euler",
+        "fps": 16,
+        "video_frames": 81,
+        "flow_shift": 5
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "description": "Wan 2.2 S2V is a single 14B model — unlike Wan 2.2 T2V/I2V A14B, there is no separate high-noise expert.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "QuantStack/Wan2.2-S2V-14B-GGUF",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan autoencoder",
+          "description": "S2V uses the Wan 2.1 VAE, not the 2.2 one.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/vae",
+            "match": "wan_2.1_vae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "UMT5-XXL text encoder",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/text_encoders",
+            "match": "umt5",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "aux",
+          "label": "wav2vec2 speech encoder",
+          "description": "Encodes the driving audio. Downloaded ready for use; sd-cli does not register a flag for it yet, so set s2v.audio_encoder_flag once it does.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/audio_encoders",
+            "match": "wav2vec2",
+            "extensions": [".safetensors"]
+          }
+        }
+      ]
+    },
+    {
       "id": "minimax-h3-ref2va",
       "kind": "video",
       "name": "MiniMax-H3 Ref2VA",
