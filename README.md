@@ -121,9 +121,10 @@ should not be listed.
 
 ## Current contents
 
-16 models, all verified against live HuggingFace listings:
+17 models, all verified against live HuggingFace listings:
 
-- **Image** — FLUX.1 schnell (GGUF and single-file), Qwen-Image, SDXL 1.0, SD 1.5
+- **Image** — FLUX.1 schnell (GGUF and single-file), FLUX.2 klein 4B,
+  Qwen-Image, SDXL 1.0, SD 1.5
 - **Video** — Wan 2.1 T2V 14B, Wan 2.1 I2V 14B 480p
 - **Text** — Qwen3 8B, Gemma 3 4B, Qwen2.5-VL 7B, SmolLM3 3B
 - **Audio** — Chatterbox (cloning), Qwen3-TTS VoiceDesign, VibeVoice 1.5B
