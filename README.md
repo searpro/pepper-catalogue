@@ -63,6 +63,30 @@ Component slots by kind:
 | `llm` | `weights`, `aux` (vision projector) |
 | `audio` | `weights`, `aux` (vocoder, tokenizer, speaker embeddings) |
 
+Anything else — a model made of whole-repo directories rather than one weight
+file per component — uses `other:<name>` (e.g. `other:transformer`), which
+installs into that directory inside the bundle. Mark such a component
+`"source": { "repo": "...", "snapshot": true }`: pepper pulls the whole
+repo (or `path` sub-folder) via `huggingface-cli`, not a single picked file.
+
+### Non-default backends
+
+Most entries say nothing about `backend`, meaning "the .cpp backend for
+`kind`" (sd-cpp for image/video, llama.cpp for llm, audio.cpp for audio). Two
+other backends exist:
+
+- **`"backend": "vllm"`** — served by vLLM-Omni directly from a HuggingFace
+  snapshot. Requires `"huggingfaceId"`, and optionally `"vllmPipelineClass"`
+  for an Omni pipeline (e.g. `"WanS2VPipeline"`).
+- **`"backend": "python"`** — a model with no native-binary story at all, run
+  through pepper's experimental Python backend (a standalone CPython runtime
+  plus venv). Requires `"pythonPackage"` (a git URL, cloned into the venv) and
+  `"pythonEntrypoint"` (the script run, relative to that clone). Optional:
+  `"pythonComponentFlags"` (component slot → the CLI flag its installed
+  directory is passed under) and `"pythonHealthPath"` (readiness path once
+  spawned; defaults to ComfyUI's `/system_stats`, almost certainly wrong for
+  anything else). See `echomimic-v3` below for a worked example.
+
 `clip` components should carry an explicit `role` — `clip_l`, `clip_g`,
 `t5xxl`, `clip_vision`, `llm`, `llm_vision` — since that decides which flag the
 file is passed under, and a text encoder loaded under the wrong flag produces
@@ -121,11 +145,12 @@ should not be listed.
 
 ## Current contents
 
-17 models, all verified against live HuggingFace listings:
+20 models, all verified against live HuggingFace listings:
 
 - **Image** — FLUX.1 schnell (GGUF and single-file), FLUX.2 klein 4B,
   Qwen-Image, SDXL 1.0, SD 1.5
-- **Video** — Wan 2.1 T2V 14B, Wan 2.1 I2V 14B 480p
+- **Video** — Wan 2.1 T2V 14B, Wan 2.1 I2V 14B 480p, Wan 2.2 S2V 14B,
+  MiniMax-H3 Ref2VA, EchoMimicV3 (Python backend)
 - **Text** — Qwen3 8B, Gemma 3 4B, Qwen2.5-VL 7B, SmolLM3 3B
 - **Audio** — Chatterbox (cloning), Qwen3-TTS VoiceDesign, VibeVoice 1.5B
   (long-form), Qwen3-ASR 0.6B, Parakeet-TDT 0.6B v3

@@ -22,6 +22,7 @@ import { readFile } from 'node:fs/promises';
 const KINDS = new Set(['image', 'video', 'audio', 'llm']);
 const KNOWN_SLOTS = new Set(['checkpoint', 'vae', 'clip', 'lora', 'weights', 'aux']);
 const CLIP_ROLES = new Set(['clip_l', 'clip_g', 'clip_vision', 't5xxl', 'llm', 'llm_vision']);
+const BACKENDS = new Set(['sdcpp', 'llamacpp', 'audiocpp', 'python', 'vllm']);
 
 const live = process.argv.includes('--live');
 const errors = [];
@@ -60,11 +61,26 @@ for (const model of catalogue.models) {
     if (!model.task) fail(where, 'audio models must declare "task" (tts | asr | …)');
   }
 
-  if ((model.kind === 'image' || model.kind === 'video') && !model.loadMode) {
+  if (model.backend !== undefined && !BACKENDS.has(model.backend)) {
+    fail(where, `"backend" must be one of ${[...BACKENDS].join(', ')}`);
+  }
+
+  // loadMode only means anything to the sdcpp checkpoint auto-detector — a
+  // vllm/python-backend model has no checkpoint file for it to guess about.
+  const sdcppServed = model.backend === undefined || model.backend === 'sdcpp';
+  if ((model.kind === 'image' || model.kind === 'video') && sdcppServed && !model.loadMode) {
     warn(where, 'no "loadMode" — the server will auto-detect, which can guess wrong on split checkpoints');
   }
-  if (model.kind === 'video' && model.mode !== 'video') {
+  if (model.kind === 'video' && sdcppServed && model.mode !== 'video') {
     fail(where, 'video models must set "mode": "video", or they generate a single frame');
+  }
+
+  if (model.backend === 'vllm' && !model.huggingfaceId) {
+    fail(where, '"backend": "vllm" models must declare "huggingfaceId" — it is what vLLM loads');
+  }
+  if (model.backend === 'python') {
+    if (!model.pythonPackage) fail(where, '"backend": "python" models must declare "pythonPackage" (a git URL)');
+    if (!model.pythonEntrypoint) fail(where, '"backend": "python" models must declare "pythonEntrypoint"');
   }
 
   if (!Array.isArray(model.components) || model.components.length === 0) {
