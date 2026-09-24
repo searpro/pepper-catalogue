@@ -23,6 +23,7 @@ const KINDS = new Set(['image', 'video', 'audio', 'llm']);
 const KNOWN_SLOTS = new Set(['checkpoint', 'vae', 'clip', 'lora', 'weights', 'aux']);
 const CLIP_ROLES = new Set(['clip_l', 'clip_g', 'clip_vision', 't5xxl', 'llm', 'llm_vision']);
 const BACKENDS = new Set(['sdcpp', 'llamacpp', 'audiocpp', 'python', 'vllm']);
+const PYTHON_RUNNERS = new Set(['wan22_ti2v', 'ltx_video', 'echomimic_v3']);
 
 const live = process.argv.includes('--live');
 const errors = [];
@@ -79,8 +80,17 @@ for (const model of catalogue.models) {
     fail(where, '"backend": "vllm" models must declare "huggingfaceId" — it is what vLLM loads');
   }
   if (model.backend === 'python') {
-    if (!model.pythonPackage) fail(where, '"backend": "python" models must declare "pythonPackage" (a git URL)');
-    if (!model.pythonEntrypoint) fail(where, '"backend": "python" models must declare "pythonEntrypoint"');
+    // Either one of pepper's own runners (server/python/pepper_runner), run
+    // once per job, or a package pepper clones and runs as a server.
+    if (model.pythonRunner) {
+      if (!PYTHON_RUNNERS.has(model.pythonRunner)) {
+        fail(where, `"pythonRunner" must be one of ${[...PYTHON_RUNNERS].join(', ')}`);
+      }
+      if (model.pythonEntrypoint) fail(where, '"pythonRunner" models are not servers — drop "pythonEntrypoint"');
+    } else {
+      if (!model.pythonPackage) fail(where, '"backend": "python" models must declare "pythonRunner" or "pythonPackage"');
+      if (!model.pythonEntrypoint) fail(where, 'server-style python models must declare "pythonEntrypoint"');
+    }
   }
 
   if (!Array.isArray(model.components) || model.components.length === 0) {
@@ -116,6 +126,10 @@ for (const model of catalogue.models) {
     }
     if (source.extensions && !Array.isArray(source.extensions)) {
       fail(cw, '"extensions" must be an array');
+    }
+    if (source.include && !Array.isArray(source.include)) fail(cw, '"include" must be an array of globs');
+    if (source.allFiles && !source.include) {
+      warn(cw, '"allFiles" without "include" installs every weight-like file in the folder');
     }
   }
 
@@ -158,6 +172,7 @@ async function checkLive() {
 
       const extensions = source.extensions ?? DEFAULT_EXTENSIONS;
       const match = source.match?.toLowerCase();
+      const include = source.include?.map(globToRegExp);
       const wantsProjector = component.role === 'llm_vision' || (match?.includes('mmproj') ?? false);
 
       const offered = entries
@@ -165,13 +180,25 @@ async function checkLive() {
         .map((entry) => entry.path.split('/').pop() ?? entry.path)
         .filter((name) => {
           const lower = name.toLowerCase();
-          if (!extensions.some((ext) => lower.endsWith(ext))) return false;
+          if (include) {
+            if (!include.some((re) => re.test(name))) return false;
+          } else if (!extensions.some((ext) => lower.endsWith(ext))) return false;
           if (match && !lower.includes(match)) return false;
           if (SHARD_RE.test(lower)) return false;
           if (DRAFT_PREFIXES.some((prefix) => lower.startsWith(prefix)) || lower.includes('-draft')) return false;
           if (!wantsProjector && lower.includes('mmproj')) return false;
           return true;
         });
+
+      // An allFiles component is a set: every named file must exist, or the
+      // install succeeds and the model fails to load.
+      if (source.allFiles && source.include) {
+        for (const glob of source.include) {
+          if (!offered.some((name) => globToRegExp(glob).test(name))) {
+            fail(cw, `"${glob}" matches nothing in ${source.repo}${source.path ? `/${source.path}` : ''}`);
+          }
+        }
+      }
 
       if (offered.length === 0) {
         const message = `resolves to 0 installable files in ${source.repo}${source.path ? `/${source.path}` : ''}`;
@@ -182,6 +209,12 @@ async function checkLive() {
       }
     }
   }
+}
+
+/** Same glob semantics as the server: `*` and `?` over a basename, case-insensitive. */
+function globToRegExp(glob) {
+  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp(`^${escaped}$`, 'i');
 }
 
 function report() {

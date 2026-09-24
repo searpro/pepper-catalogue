@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-24T00:00:00Z",
+  "updatedAt": "2026-09-24T18:00:00Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -894,40 +894,225 @@
     {
       "id": "echomimic-v3",
       "kind": "video",
-      "name": "EchoMimicV3",
-      "description": "1.3B talking-head / full-body human animation from a reference image, an audio track and a text prompt. Runs through pepper's Python backend, not sd-cli — no GGUF, no vLLM pipeline.",
+      "name": "EchoMimicV3 Flash",
+      "description": "1.3B audio-driven human animation: one reference image plus a speech clip becomes a talking, gesturing video (up to ~5 s per run at 25 fps). The Flash release — 8 steps, no face mask needed. Runs through pepper's Python backend on CUDA or Apple Silicon; Apache-2.0.",
       "reference": "https://huggingface.co/BadToBest/EchoMimicV3",
-      "tags": ["talking-head", "audio-driven", "human-animation", "python"],
+      "tags": ["talking-head", "audio-driven", "human-animation", "python", "apache-2.0"],
       "backend": "python",
+      "pythonRunner": "echomimic_v3",
+      "pythonPackage": "https://github.com/antgroup/echomimic_v3#7e89489ca51c0d008fc1963ec6c03fc5bd0b9397",
       "mode": "video",
-      "pythonPackage": "https://github.com/antgroup/echomimic_v3",
-      "pythonEntrypoint": "infer_preview.py",
-      "pythonComponentFlags": {
-        "other:base_model": "--pretrained_wan_path",
-        "other:wav2vec": "--wav2vec_path",
-        "other:transformer": "--transformer_path"
+      "capabilities": ["s2v"],
+      "defaults": {
+        "steps": 8,
+        "cfg_scale": 6,
+        "width": 512,
+        "height": 512,
+        "video_frames": 121,
+        "fps": 25
       },
       "components": [
         {
-          "slot": "other:base_model",
-          "label": "Wan2.1-Fun-V1.1-1.3B-InP (base model)",
-          "description": "The diffusion backbone EchoMimicV3's transformer is trained on top of.",
+          "slot": "checkpoint",
+          "label": "EchoMimicV3 Flash transformer",
+          "description": "The audio-conditioned Wan 2.1 1.3B transformer, with its config.",
           "required": true,
-          "source": { "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP", "snapshot": true }
+          "source": {
+            "repo": "BadToBest/EchoMimicV3",
+            "path": "echomimicv3-flash-pro",
+            "allFiles": true,
+            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan 2.1 VAE",
+          "required": true,
+          "source": {
+            "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP",
+            "match": "Wan2.1_VAE",
+            "extensions": [".pth"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "umt5-xxl text encoder",
+          "description": "GGUF instead of upstream's 11 GB .pth: the same encoder, loaded and freed before sampling. Q3_K_S is ample for prompt encoding.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "city96/umt5-xxl-encoder-gguf",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "other:tokenizer",
+          "label": "umt5-xxl tokenizer",
+          "required": true,
+          "source": {
+            "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP",
+            "path": "google/umt5-xxl",
+            "allFiles": true,
+            "include": ["spiece.model", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
+          }
+        },
+        {
+          "slot": "other:image_encoder",
+          "label": "CLIP ViT-H/14 image encoder",
+          "description": "The visual tower only (1.3 GB) instead of upstream's 4.8 GB open-clip checkpoint.",
+          "required": true,
+          "source": {
+            "repo": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
+            "path": "image_encoder",
+            "allFiles": true,
+            "include": ["config.json", "model.safetensors"]
+          }
         },
         {
           "slot": "other:wav2vec",
-          "label": "wav2vec2-base-960h (audio encoder)",
-          "description": "Encodes the driving audio track for lip/motion sync.",
+          "label": "chinese-wav2vec2-base audio encoder",
+          "description": "The Flash release's audio encoder (the preview model used wav2vec2-base-960h).",
           "required": true,
-          "source": { "repo": "facebook/wav2vec2-base-960h", "snapshot": true }
+          "source": {
+            "repo": "TencentGameMate/chinese-wav2vec2-base",
+            "allFiles": true,
+            "include": ["config.json", "preprocessor_config.json", "pytorch_model.bin"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wan2.2-ti2v-5b-turbo",
+      "kind": "video",
+      "name": "Wan 2.2 TI2V-5B Turbo",
+      "description": "The best quality per gigabyte of the small video models: text-to-video and image-to-video from one 5B model, distilled to 4 steps at cfg 1. Runs through pepper's Python backend (diffusers) on CUDA or Apple Silicon; roughly 5 minutes for 2 seconds at 704x512 on a 24 GB M4. Keep the short side at 512 or more — it mangles faces below that. Apache-2.0.",
+      "reference": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B",
+      "tags": ["wan", "t2v", "i2v", "fast", "python", "apache-2.0"],
+      "backend": "python",
+      "pythonRunner": "wan22_ti2v",
+      "mode": "video",
+      "defaults": {
+        "steps": 4,
+        "cfg_scale": 1,
+        "width": 704,
+        "height": 512,
+        "video_frames": 49,
+        "fps": 24
+      },
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Wan 2.2 TI2V-5B Turbo transformer",
+          "description": "Q5_K_M is the measured sweet spot; diffusers keeps it quantized in memory.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF",
+            "extensions": [".gguf"]
+          }
         },
         {
-          "slot": "other:transformer",
-          "label": "EchoMimicV3 transformer weights",
-          "description": "The model-specific weights on top of the Wan base — this is what makes it EchoMimicV3.",
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "umt5-xxl text encoder",
+          "description": "Loaded, used for the prompt and freed before sampling. Q3_K_S is ample.",
           "required": true,
-          "source": { "repo": "BadToBest/EchoMimicV3", "path": "transformer", "snapshot": true }
+          "quantizable": true,
+          "source": {
+            "repo": "city96/umt5-xxl-encoder-gguf",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan 2.2 VAE",
+          "description": "The 16x-compression 2.2 VAE, in diffusers format (no single-file converter exists for it).",
+          "required": true,
+          "source": {
+            "repo": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+            "path": "vae",
+            "allFiles": true,
+            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
+          }
+        },
+        {
+          "slot": "other:tokenizer",
+          "label": "umt5-xxl tokenizer",
+          "required": true,
+          "source": {
+            "repo": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+            "path": "tokenizer",
+            "allFiles": true,
+            "include": ["spiece.model", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ltx-video-2b-distilled",
+      "kind": "video",
+      "name": "LTX-Video 0.9.8 2B distilled",
+      "description": "The fastest small video model: text-to-video and image-to-video with Lightricks' distilled multi-scale recipe (7 steps at half size, a 2x latent upsample, 3 refining steps). About 3 minutes for 97 frames at 768x512 on a 24 GB M4; weaker than Wan 2.2 5B at holding detail on image-to-video. Runs through pepper's Python backend. LTX open-weights licence.",
+      "reference": "https://huggingface.co/Lightricks/LTX-Video",
+      "tags": ["ltx", "t2v", "i2v", "fast", "python"],
+      "backend": "python",
+      "pythonRunner": "ltx_video",
+      "mode": "video",
+      "defaults": {
+        "steps": 10,
+        "cfg_scale": 1,
+        "width": 768,
+        "height": 512,
+        "video_frames": 97,
+        "fps": 24
+      },
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "LTX-Video 2B 0.9.8 distilled",
+          "description": "Transformer and VAE in one file. The fp8 variant is CUDA-only.",
+          "required": true,
+          "source": {
+            "repo": "Lightricks/LTX-Video",
+            "match": "ltxv-2b-0.9.8-distilled.safetensors",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "T5-XXL text encoder",
+          "description": "Loaded, used for the prompt and freed before sampling.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "city96/t5-v1_1-xxl-encoder-gguf",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "other:tokenizer",
+          "label": "T5 tokenizer",
+          "required": true,
+          "source": {
+            "repo": "Lightricks/LTX-Video-0.9.5",
+            "path": "tokenizer",
+            "allFiles": true,
+            "include": ["spiece.model", "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json"]
+          }
+        },
+        {
+          "slot": "other:upsampler",
+          "label": "Spatial latent upsampler",
+          "description": "Enables the multi-scale pass. Without it, generation is single-pass: faster and softer.",
+          "required": false,
+          "source": {
+            "repo": "Lightricks/ltxv-spatial-upscaler-0.9.7",
+            "path": "latent_upsampler",
+            "allFiles": true,
+            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
+          }
         }
       ]
     }
