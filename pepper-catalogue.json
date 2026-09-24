@@ -903,6 +903,14 @@
       "pythonPackage": "https://github.com/antgroup/echomimic_v3#7e89489ca51c0d008fc1963ec6c03fc5bd0b9397",
       "mode": "video",
       "capabilities": ["s2v"],
+      "s2v": {
+        "frames_per_chunk": 121,
+        "chunk_seconds": 4.84,
+        "overlap_seconds": 0.4,
+        "frame_grid": { "stride": 4, "offset": 1 },
+        "sample_rate": 16000,
+        "chain_frames": true
+      },
       "defaults": {
         "steps": 8,
         "cfg_scale": 6,
