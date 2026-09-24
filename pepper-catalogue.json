@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-16T00:00:00Z",
+  "updatedAt": "2026-09-24T00:00:00Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -778,6 +778,46 @@
             "path": "Parakeet-TDT-0.6B-v3-GGUF",
             "extensions": [".gguf"]
           }
+        }
+      ]
+    },
+    {
+      "id": "echomimic-v3",
+      "kind": "video",
+      "name": "EchoMimicV3",
+      "description": "1.3B talking-head / full-body human animation from a reference image, an audio track and a text prompt. Runs through pepper's Python backend, not sd-cli — no GGUF, no vLLM pipeline.",
+      "reference": "https://huggingface.co/BadToBest/EchoMimicV3",
+      "tags": ["talking-head", "audio-driven", "human-animation", "python"],
+      "backend": "python",
+      "mode": "video",
+      "pythonPackage": "https://github.com/antgroup/echomimic_v3",
+      "pythonEntrypoint": "infer_preview.py",
+      "pythonComponentFlags": {
+        "other:base_model": "--pretrained_wan_path",
+        "other:wav2vec": "--wav2vec_path",
+        "other:transformer": "--transformer_path"
+      },
+      "components": [
+        {
+          "slot": "other:base_model",
+          "label": "Wan2.1-Fun-V1.1-1.3B-InP (base model)",
+          "description": "The diffusion backbone EchoMimicV3's transformer is trained on top of.",
+          "required": true,
+          "source": { "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP", "snapshot": true }
+        },
+        {
+          "slot": "other:wav2vec",
+          "label": "wav2vec2-base-960h (audio encoder)",
+          "description": "Encodes the driving audio track for lip/motion sync.",
+          "required": true,
+          "source": { "repo": "facebook/wav2vec2-base-960h", "snapshot": true }
+        },
+        {
+          "slot": "other:transformer",
+          "label": "EchoMimicV3 transformer weights",
+          "description": "The model-specific weights on top of the Wan base — this is what makes it EchoMimicV3.",
+          "required": true,
+          "source": { "repo": "BadToBest/EchoMimicV3", "path": "transformer", "snapshot": true }
         }
       ]
     }
