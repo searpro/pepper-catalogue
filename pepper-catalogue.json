@@ -895,7 +895,7 @@
       "id": "echomimic-v3",
       "kind": "video",
       "name": "EchoMimicV3 Flash",
-      "description": "1.3B audio-driven human animation: one reference image plus a speech clip becomes a talking, gesturing video (up to ~5 s per run at 25 fps). The Flash release — 8 steps, no face mask needed. Runs through pepper's Python backend on CUDA or Apple Silicon; Apache-2.0.",
+      "description": "1.3B audio-driven human animation: one reference image plus a speech clip becomes a talking, gesturing video (any length: the speech is rendered in overlapping ~3 s chunks, each seeded from the last, and stitched). The Flash release — 8 steps, no face mask needed. Runs through pepper's Python backend on CUDA or Apple Silicon; Apache-2.0.",
       "reference": "https://huggingface.co/BadToBest/EchoMimicV3",
       "tags": ["talking-head", "audio-driven", "human-animation", "python", "apache-2.0"],
       "backend": "python",
@@ -904,8 +904,8 @@
       "mode": "video",
       "capabilities": ["s2v"],
       "s2v": {
-        "frames_per_chunk": 121,
-        "chunk_seconds": 4.84,
+        "frames_per_chunk": 81,
+        "chunk_seconds": 3.24,
         "overlap_seconds": 0.4,
         "frame_grid": { "stride": 4, "offset": 1 },
         "sample_rate": 16000,
@@ -916,7 +916,7 @@
         "cfg_scale": 6,
         "width": 512,
         "height": 512,
-        "video_frames": 121,
+        "video_frames": 81,
         "fps": 25
       },
       "components": [
