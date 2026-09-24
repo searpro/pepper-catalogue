@@ -155,6 +155,116 @@
       ]
     },
     {
+      "id": "flux2-klein-9b",
+      "kind": "image",
+      "name": "FLUX.2 klein 9B",
+      "description": "Distilled 9B FLUX.2 model for text-to-image and reference-image editing, four steps at cfg 1. Noticeably better detail and prompt adherence than klein 4B for roughly twice the memory. FLUX non-commercial licence; the autoencoder comes from the gated FLUX.2-dev repository, so installing this one needs HF_TOKEN.",
+      "reference": "https://huggingface.co/black-forest-labs/FLUX.2-klein-9B",
+      "tags": ["flux", "flux2", "fast", "distilled", "edit", "non-commercial"],
+      "loadMode": "diffusion-model",
+      "mode": "image",
+      "defaults": {
+        "steps": 4,
+        "cfg_scale": 1,
+        "width": 1024,
+        "height": 1024,
+        "sampler": "euler"
+      },
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "description": "Q8_0 is the quality reference; Q4_0 roughly halves the footprint.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/FLUX.2-klein-9B-GGUF",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "FLUX.2 autoencoder",
+          "description": "Shared across the FLUX.2 family. Gated: accept the licence and set HF_TOKEN.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "black-forest-labs/FLUX.2-dev",
+            "match": "ae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen3-8B text encoder",
+          "description": "klein 9B conditions on Qwen3-8B, not the 4B encoder klein 4B uses. Q4_K_M is ample for prompt encoding.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "unsloth/Qwen3-8B-GGUF",
+            "match": "Qwen3-8B",
+            "extensions": [".gguf"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "z-image-turbo",
+      "kind": "image",
+      "name": "Z-Image Turbo",
+      "description": "Tongyi's distilled 6B text-to-image model, eight steps at cfg 1. Strong photorealism and bilingual (English/Chinese) text rendering, and runs in about 4 GB of VRAM at Q3_K. Apache-2.0; the autoencoder comes from the FLUX.1-schnell repository, which asks you to accept its terms, so set HF_TOKEN.",
+      "reference": "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo",
+      "tags": ["z-image", "fast", "distilled", "text-rendering", "apache-2.0"],
+      "loadMode": "diffusion-model",
+      "mode": "image",
+      "defaults": {
+        "steps": 8,
+        "cfg_scale": 1,
+        "width": 1024,
+        "height": 1024,
+        "sampler": "euler"
+      },
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "description": "Q8_0 is visually indistinguishable from bf16; Q4_K holds up well; Q3_K and below trade visible detail for memory.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/Z-Image-Turbo-GGUF",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "FLUX.1 autoencoder",
+          "description": "Z-Image decodes with the FLUX.1 autoencoder.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "black-forest-labs/FLUX.1-schnell",
+            "match": "ae.safetensors",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen3-4B-Instruct-2507 text encoder",
+          "description": "The 2507 instruct release, as the stable-diffusion.cpp docs use. Q4_K_M is ample for prompt encoding.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+            "match": "Qwen3-4B-Instruct-2507",
+            "extensions": [".gguf"]
+          }
+        }
+      ]
+    },
+    {
       "id": "qwen-image-gguf",
       "kind": "image",
       "name": "Qwen-Image (GGUF)",
