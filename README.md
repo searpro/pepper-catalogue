@@ -145,12 +145,14 @@ should not be listed.
 
 ## Current contents
 
-20 models, all verified against live HuggingFace listings:
+29 models, all verified against live HuggingFace listings:
 
-- **Image** — FLUX.1 schnell (GGUF and single-file), FLUX.2 klein 4B,
-  Qwen-Image, SDXL 1.0, SD 1.5
+- **Image** — FLUX.1 schnell (GGUF and single-file), FLUX.2 klein 4B and 9B,
+  Z-Image Turbo, Qwen-Image, Qwen-Image 2.1, Mage-Flow (base, Turbo, Edit,
+  Edit Turbo), SDXL 1.0, SD 1.5
 - **Video** — Wan 2.1 T2V 14B, Wan 2.1 I2V 14B 480p, Wan 2.2 S2V 14B,
-  MiniMax-H3 Ref2VA, EchoMimicV3 (Python backend)
+  MiniMax-H3 Ref2VA, and through the Python backend EchoMimicV3, Wan 2.2
+  TI2V 5B Turbo and LTX-Video 2B distilled
 - **Text** — Qwen3 8B, Gemma 3 4B, Qwen2.5-VL 7B, SmolLM3 3B
 - **Audio** — Chatterbox (cloning), Qwen3-TTS VoiceDesign, VibeVoice 1.5B
   (long-form), Qwen3-ASR 0.6B, Parakeet-TDT 0.6B v3
