@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-24T18:00:00Z",
+  "updatedAt": "2026-09-26T00:00:00Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -829,6 +829,77 @@
       ]
     },
     {
+      "id": "wan2.2-i2v-a14b-lightx2v",
+      "kind": "video",
+      "name": "Wan 2.2 I2V A14B (lightx2v 4-step)",
+      "description": "Image-to-video from an uploaded still. Wan 2.2's two 14B experts with the LightX2V 4-step distillation merged in (April 2026 release), so no LoRAs are needed. About 20 minutes for 5 s at 480x832 on a T4.",
+      "reference": "https://huggingface.co/lightx2v/Wan2.2-Distill-Models",
+      "tags": ["wan", "image-to-video", "distilled"],
+      "params": "2x14B",
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 2,
+        "cfg_scale": 1,
+        "width": 480,
+        "height": 832,
+        "sampler": "euler",
+        "fps": 16,
+        "video_frames": 81
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--vae-tiling", "--high-noise-steps", "2", "--high-noise-cfg-scale", "1", "--high-noise-sampling-method", "euler", "--sigmas", "1.0,0.9375,0.8333,0.625,0.0"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "High-noise expert",
+          "description": "Runs the first two steps. Pepper recognises it by the high_noise in its filename.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "jayn7/WAN2.2-I2V_A14B-DISTILL-LIGHTX2V-4STEP-GGUF",
+            "path": "high_noise_260412",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "checkpoint",
+          "label": "Low-noise expert",
+          "description": "Runs the last two steps.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "jayn7/WAN2.2-I2V_A14B-DISTILL-LIGHTX2V-4STEP-GGUF",
+            "path": "low_noise_260412",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan autoencoder",
+          "description": "Wan 2.2 A14B uses the Wan 2.1 VAE.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+            "path": "split_files/vae",
+            "match": "wan_2.1_vae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "UMT5-XXL text encoder",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "city96/umt5-xxl-encoder-gguf",
+            "extensions": [".gguf"]
+          }
+        }
+      ]
+    },
+    {
       "id": "wan2.2-s2v-14b",
       "kind": "video",
       "name": "Wan 2.2 S2V 14B",
@@ -839,12 +910,13 @@
       "mode": "video",
       "capabilities": ["s2v"],
       "s2v": {
-        "audio_flag": "--ref-audio",
+        "audio_flag": "--audio",
         "chain_flag": "-i",
         "frames_per_chunk": 81,
         "chunk_seconds": 5,
         "overlap_seconds": 0.5,
-        "sample_rate": 16000
+        "sample_rate": 16000,
+        "audio_encoder_flag": "--audio-encoder"
       },
       "defaults": {
         "steps": 20,
@@ -898,7 +970,7 @@
         {
           "slot": "aux",
           "label": "wav2vec2 speech encoder",
-          "description": "Encodes the driving audio. Downloaded ready for use; sd-cli does not register a flag for it yet, so set s2v.audio_encoder_flag once it does.",
+          "description": "Encodes the driving audio; passed to sd-cli under --audio-encoder.",
           "required": true,
           "quantizable": false,
           "source": {
@@ -1133,7 +1205,7 @@
       "reference": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
       "tags": ["tts", "voice-design", "voice-cloning"],
       "family": "qwen3_tts",
-      "task": "tts",
+      "task": "vdes",
       "components": [
         {
           "slot": "weights",
