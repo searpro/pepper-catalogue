@@ -23,7 +23,7 @@ const KINDS = new Set(['image', 'video', 'audio', 'llm']);
 const KNOWN_SLOTS = new Set(['checkpoint', 'vae', 'clip', 'lora', 'weights', 'aux']);
 const CLIP_ROLES = new Set(['clip_l', 'clip_g', 'clip_vision', 't5xxl', 'llm', 'llm_vision']);
 const BACKENDS = new Set(['sdcpp', 'llamacpp', 'audiocpp', 'python', 'vllm']);
-const PYTHON_RUNNERS = new Set(['wan22_ti2v', 'ltx_video', 'echomimic_v3']);
+const PYTHON_RUNNERS = new Set(['wan22_ti2v', 'ltx_video', 'echomimic_v3', 'seedvr2', 'yue2']);
 
 const live = process.argv.includes('--live');
 const errors = [];
@@ -57,8 +57,11 @@ for (const model of catalogue.models) {
 
   // audio.cpp cannot register a bundle without these, and neither is derivable
   // from the files, so an audio entry missing them installs something unusable.
+  // A Python-runner audio model (YuE2) is not audio.cpp's and needs no family.
   if (model.kind === 'audio') {
-    if (!model.family) fail(where, 'audio models must declare "family" (audio.cpp model_specs/<family>.json)');
+    if (!model.family && model.backend !== 'python') {
+      fail(where, 'audio models must declare "family" (audio.cpp model_specs/<family>.json)');
+    }
     if (!model.task) fail(where, 'audio models must declare "task" (tts | asr | …)');
   }
 
@@ -131,6 +134,16 @@ for (const model of catalogue.models) {
     if (source.allFiles && !source.include) {
       warn(cw, '"allFiles" without "include" installs every weight-like file in the folder');
     }
+    if (component.alternatives !== undefined) {
+      if (!Array.isArray(component.alternatives)) fail(cw, '"alternatives" must be an array of sources');
+      for (const [i, alt] of (component.alternatives ?? []).entries()) {
+        if (!alt.repo && !alt.url) fail(cw, `alternatives[${i}] needs "repo" or "url"`);
+        if (alt.repo && !/^[\w.-]+\/[\w.-]+$/.test(alt.repo)) fail(cw, `alternatives[${i}].repo must look like owner/name`);
+      }
+    }
+    if (component.recommended !== undefined && typeof component.recommended !== 'string') {
+      fail(cw, '"recommended" must be a filename substring');
+    }
   }
 
   if (required === 0) warn(where, 'no component is marked "required" — nothing is pre-selected on install');
@@ -141,6 +154,7 @@ if (live) await checkLive();
 report();
 
 async function checkLive() {
+  const gatedChecked = new Map();
   // The same filters the server applies, so this reports what a user would
   // actually be offered rather than the raw file list.
   const SHARD_RE = /-\d{5}-of-\d{5}\.[a-z]+$/;
@@ -150,8 +164,36 @@ async function checkLive() {
   for (const model of catalogue.models) {
     for (const [index, component] of (model.components ?? []).entries()) {
       const cw = `${model.id}/components[${index}] (${component.slot})`;
-      const source = component.source ?? {};
-      if (source.url || !source.repo) continue;
+      // The primary source and every alternative are offered as one list, so
+      // `recommended` is checked against all of them together.
+      const all = [];
+      for (const [i, source] of [component.source ?? {}, ...(component.alternatives ?? [])].entries()) {
+        const offered = await liveFiles(i === 0 ? cw : `${cw} alternatives[${i - 1}]`, component, source);
+        if (offered) all.push(...offered);
+      }
+      if (component.recommended) {
+        const want = component.recommended.toLowerCase();
+        if (!all.some((name) => name.toLowerCase().includes(want))) {
+          fail(cw, `"recommended": "${component.recommended}" matches none of the offered files`);
+        }
+      }
+    }
+  }
+
+  async function liveFiles(cw, component, source) {
+      if (source.url || !source.repo) return source.url ? [source.url.split('/').pop()] : [];
+
+      // The tree listing works on a gated repo, but downloads 401 without a
+      // token that has accepted its licence — a one-click install that fails.
+      if (!gatedChecked.has(source.repo)) {
+        const info = await fetch(`https://huggingface.co/api/models/${source.repo}`, {
+          headers: { 'User-Agent': 'pepper-catalogue-validate' },
+        }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+        gatedChecked.set(source.repo, info.gated);
+      }
+      if (gatedChecked.get(source.repo)) {
+        warn(cw, `${source.repo} is gated (${gatedChecked.get(source.repo)}): installs need HF_TOKEN and an accepted licence`);
+      }
 
       const url = `https://huggingface.co/api/models/${source.repo}/tree/main${
         source.path ? `/${source.path}` : ''
@@ -162,12 +204,12 @@ async function checkLive() {
         const response = await fetch(url, { headers: { 'User-Agent': 'pepper-catalogue-validate' } });
         if (!response.ok) {
           fail(cw, `HuggingFace returned ${response.status} for ${source.repo}${source.path ? `/${source.path}` : ''}`);
-          continue;
+          return null;
         }
         entries = await response.json();
       } catch (err) {
         fail(cw, `could not reach HuggingFace: ${err.message}`);
-        continue;
+        return null;
       }
 
       const extensions = source.extensions ?? DEFAULT_EXTENSIONS;
@@ -207,7 +249,7 @@ async function checkLive() {
       } else {
         console.log(`  ok  ${cw} → ${offered.length} file(s)`);
       }
-    }
+      return offered;
   }
 }
 
