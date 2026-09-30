@@ -866,7 +866,7 @@
         {
           "slot": "checkpoint",
           "label": "Diffusion model (Ref2VA)",
-          "description": "The full Q4_K_M transformer; the pruned one saves 7 GB at a cost in motion and detail.",
+          "description": "The pruned Q4_K_M transformer (11 GB): with the Q4_K_M encoder and fp16 VAE the set is 35 GB, inside a 46 GB pod's RAM. The full transformer (19 GB) needs a host with 64 GB.",
           "required": true,
           "quantizable": true,
           "source": {
@@ -874,7 +874,7 @@
             "match": "ref2va",
             "extensions": [".gguf"]
           },
-          "recommended": "ref2va-Q4_K_M"
+          "recommended": "ref2va_pruned"
         },
         {
           "slot": "clip",
@@ -943,7 +943,7 @@
         {
           "slot": "checkpoint",
           "label": "Diffusion model (FL2VA)",
-          "description": "The full Q4_K_M transformer; the pruned one saves 7 GB at a cost in motion and detail.",
+          "description": "The pruned Q4_K_M transformer (11 GB): with the Q4_K_M encoder and fp16 VAE the set is 35 GB, inside a 46 GB pod's RAM. The full transformer (19 GB) needs a host with 64 GB.",
           "required": true,
           "quantizable": true,
           "source": {
@@ -951,7 +951,7 @@
             "match": "fl2va",
             "extensions": [".gguf"]
           },
-          "recommended": "fl2va-Q4_K_M"
+          "recommended": "fl2va_pruned"
         },
         {
           "slot": "clip",
@@ -1185,7 +1185,7 @@
       "id": "wan2.2-t2v-a14b",
       "kind": "video",
       "name": "Wan 2.2 T2V A14B",
-      "description": "Alibaba's 14B mixture-of-experts text-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0.",
+      "description": "Alibaba's 14B mixture-of-experts text-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0. Sized for 46 GB of system RAM, the usual 24 GB pod: with CPU offload the whole weight set lives in RAM.",
       "reference": "https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B",
       "tags": ["wan", "t2v", "moe", "photoreal", "lightning", "apache-2.0"],
       "loadMode": "diffusion-model",
@@ -1202,21 +1202,21 @@
         "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
         "loras": [
           {
-            "name": "high_noise_model",
+            "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise",
             "weight": 1
           },
           {
-            "name": "low_noise_model",
+            "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise",
             "weight": 1
           }
         ]
       },
       "loraPresets": {
-        "high_noise_model": {
+        "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise": {
           "steps": 4,
           "cfg_scale": 1
         },
-        "low_noise_model": {
+        "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise": {
           "steps": 4,
           "cfg_scale": 1
         }
@@ -1226,10 +1226,10 @@
         {
           "slot": "checkpoint",
           "label": "High-noise expert",
-          "description": "Runs the early, high-noise steps. Q8_0 is near-lossless; the experts load one at a time.",
+          "description": "Runs the early, high-noise steps. Q6_K for both experts fits 46 GB of RAM alongside the encoder and LoRAs; Q8_0 needs a host with more.",
           "required": true,
           "quantizable": true,
-          "recommended": "Q8_0",
+          "recommended": "Q6_K",
           "source": {
             "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
             "path": "HighNoise",
@@ -1242,7 +1242,7 @@
           "description": "Runs the late, detail steps.",
           "required": true,
           "quantizable": true,
-          "recommended": "Q8_0",
+          "recommended": "Q6_K",
           "source": {
             "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
             "path": "LowNoise",
@@ -1265,10 +1265,10 @@
           "slot": "clip",
           "role": "t5xxl",
           "label": "umt5-xxl text encoder",
-          "description": "fp16 for prompt fidelity; fp8 saves 5 GB.",
+          "description": "fp8 keeps the set inside 46 GB of RAM; fp16 on hosts with more.",
           "required": true,
           "quantizable": true,
-          "recommended": "fp16",
+          "recommended": "fp8",
           "source": {
             "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
             "path": "split_files/text_encoders",
@@ -1279,14 +1279,14 @@
         {
           "slot": "lora",
           "label": "Lightning LoRA pair (4 steps)",
-          "description": "lightx2v's high- and low-noise distillation LoRAs; Pepper routes each to its expert.",
+          "description": "lightx2v's 4-step distillation LoRAs (Comfy-Org's repackaged copies, the ones stable-diffusion.cpp documents); Pepper routes each to its expert.",
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "lightx2v/Wan2.2-Lightning",
-            "path": "Wan2.2-T2V-A14B-4steps-lora-rank64-Seko-V2.0",
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/loras",
             "allFiles": true,
-            "include": ["*.safetensors"]
+            "include": ["wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors", "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors"]
           }
         }
       ]
@@ -1295,7 +1295,7 @@
       "id": "wan2.2-i2v-a14b",
       "kind": "video",
       "name": "Wan 2.2 I2V A14B",
-      "description": "Alibaba's 14B mixture-of-experts image-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0.",
+      "description": "Alibaba's 14B mixture-of-experts image-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0. Sized for 46 GB of system RAM, the usual 24 GB pod: with CPU offload the whole weight set lives in RAM.",
       "reference": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B",
       "tags": ["wan", "i2v", "moe", "photoreal", "lightning", "apache-2.0"],
       "loadMode": "diffusion-model",
@@ -1312,21 +1312,21 @@
         "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
         "loras": [
           {
-            "name": "high_noise_model",
+            "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise",
             "weight": 1
           },
           {
-            "name": "low_noise_model",
+            "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise",
             "weight": 1
           }
         ]
       },
       "loraPresets": {
-        "high_noise_model": {
+        "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise": {
           "steps": 4,
           "cfg_scale": 1
         },
-        "low_noise_model": {
+        "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise": {
           "steps": 4,
           "cfg_scale": 1
         }
@@ -1336,10 +1336,10 @@
         {
           "slot": "checkpoint",
           "label": "High-noise expert",
-          "description": "Runs the early, high-noise steps. Q8_0 is near-lossless; the experts load one at a time.",
+          "description": "Runs the early, high-noise steps. Q6_K for both experts fits 46 GB of RAM alongside the encoder and LoRAs; Q8_0 needs a host with more.",
           "required": true,
           "quantizable": true,
-          "recommended": "Q8_0",
+          "recommended": "Q6_K",
           "source": {
             "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
             "path": "HighNoise",
@@ -1352,7 +1352,7 @@
           "description": "Runs the late, detail steps.",
           "required": true,
           "quantizable": true,
-          "recommended": "Q8_0",
+          "recommended": "Q6_K",
           "source": {
             "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
             "path": "LowNoise",
@@ -1375,10 +1375,10 @@
           "slot": "clip",
           "role": "t5xxl",
           "label": "umt5-xxl text encoder",
-          "description": "fp16 for prompt fidelity; fp8 saves 5 GB.",
+          "description": "fp8 keeps the set inside 46 GB of RAM; fp16 on hosts with more.",
           "required": true,
           "quantizable": true,
-          "recommended": "fp16",
+          "recommended": "fp8",
           "source": {
             "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
             "path": "split_files/text_encoders",
@@ -1389,14 +1389,14 @@
         {
           "slot": "lora",
           "label": "Lightning LoRA pair (4 steps)",
-          "description": "lightx2v's high- and low-noise distillation LoRAs; Pepper routes each to its expert.",
+          "description": "lightx2v's 4-step distillation LoRAs (Comfy-Org's repackaged copies, the ones stable-diffusion.cpp documents); Pepper routes each to its expert.",
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "lightx2v/Wan2.2-Lightning",
-            "path": "Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1",
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/loras",
             "allFiles": true,
-            "include": ["*.safetensors"]
+            "include": ["wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors", "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"]
           }
         }
       ]
