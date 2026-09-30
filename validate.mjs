@@ -179,8 +179,21 @@ async function checkLive() {
     }
   }
 
+  const gatedChecked = new Map();
   async function liveFiles(cw, component, source) {
       if (source.url || !source.repo) return source.url ? [source.url.split('/').pop()] : [];
+
+      // The tree listing works on a gated repo, but downloads 401 without a
+      // token that has accepted its licence — a one-click install that fails.
+      if (!gatedChecked.has(source.repo)) {
+        const info = await fetch(`https://huggingface.co/api/models/${source.repo}`, {
+          headers: { 'User-Agent': 'pepper-catalogue-validate' },
+        }).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+        gatedChecked.set(source.repo, info.gated);
+      }
+      if (gatedChecked.get(source.repo)) {
+        warn(cw, `${source.repo} is gated (${gatedChecked.get(source.repo)}): installs need HF_TOKEN and an accepted licence`);
+      }
 
       const url = `https://huggingface.co/api/models/${source.repo}/tree/main${
         source.path ? `/${source.path}` : ''
