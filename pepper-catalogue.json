@@ -1694,6 +1694,18 @@
             "allFiles": true,
             "include": ["model.safetensors", "config.json", "generation_config.json", "modeling_yue2.py", "qwen.tiktoken", "weights_manifest.json", "yue2_generation_config.json"]
           }
+        },
+        {
+          "slot": "aux",
+          "label": "YuE2 VAE",
+          "description": "Renders the generated latents to 48 kHz stereo audio.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "m-a-p/YuE2-Vae",
+            "allFiles": true,
+            "include": ["model.safetensors", "config.json", "modeling_vae.py", "weights_manifest.json"]
+          }
         }
       ]
     }
