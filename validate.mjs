@@ -131,6 +131,16 @@ for (const model of catalogue.models) {
     if (source.allFiles && !source.include) {
       warn(cw, '"allFiles" without "include" installs every weight-like file in the folder');
     }
+    if (component.alternatives !== undefined) {
+      if (!Array.isArray(component.alternatives)) fail(cw, '"alternatives" must be an array of sources');
+      for (const [i, alt] of (component.alternatives ?? []).entries()) {
+        if (!alt.repo && !alt.url) fail(cw, `alternatives[${i}] needs "repo" or "url"`);
+        if (alt.repo && !/^[\w.-]+\/[\w.-]+$/.test(alt.repo)) fail(cw, `alternatives[${i}].repo must look like owner/name`);
+      }
+    }
+    if (component.recommended !== undefined && typeof component.recommended !== 'string') {
+      fail(cw, '"recommended" must be a filename substring');
+    }
   }
 
   if (required === 0) warn(where, 'no component is marked "required" — nothing is pre-selected on install');
@@ -150,8 +160,24 @@ async function checkLive() {
   for (const model of catalogue.models) {
     for (const [index, component] of (model.components ?? []).entries()) {
       const cw = `${model.id}/components[${index}] (${component.slot})`;
-      const source = component.source ?? {};
-      if (source.url || !source.repo) continue;
+      // The primary source and every alternative are offered as one list, so
+      // `recommended` is checked against all of them together.
+      const all = [];
+      for (const [i, source] of [component.source ?? {}, ...(component.alternatives ?? [])].entries()) {
+        const offered = await liveFiles(i === 0 ? cw : `${cw} alternatives[${i - 1}]`, component, source);
+        if (offered) all.push(...offered);
+      }
+      if (component.recommended) {
+        const want = component.recommended.toLowerCase();
+        if (!all.some((name) => name.toLowerCase().includes(want))) {
+          fail(cw, `"recommended": "${component.recommended}" matches none of the offered files`);
+        }
+      }
+    }
+  }
+
+  async function liveFiles(cw, component, source) {
+      if (source.url || !source.repo) return source.url ? [source.url.split('/').pop()] : [];
 
       const url = `https://huggingface.co/api/models/${source.repo}/tree/main${
         source.path ? `/${source.path}` : ''
@@ -162,12 +188,12 @@ async function checkLive() {
         const response = await fetch(url, { headers: { 'User-Agent': 'pepper-catalogue-validate' } });
         if (!response.ok) {
           fail(cw, `HuggingFace returned ${response.status} for ${source.repo}${source.path ? `/${source.path}` : ''}`);
-          continue;
+          return null;
         }
         entries = await response.json();
       } catch (err) {
         fail(cw, `could not reach HuggingFace: ${err.message}`);
-        continue;
+        return null;
       }
 
       const extensions = source.extensions ?? DEFAULT_EXTENSIONS;
@@ -207,7 +233,7 @@ async function checkLive() {
       } else {
         console.log(`  ok  ${cw} → ${offered.length} file(s)`);
       }
-    }
+      return offered;
   }
 }
 

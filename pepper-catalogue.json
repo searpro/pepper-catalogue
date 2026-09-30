@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-30T01:48:05Z",
+  "updatedAt": "2026-09-30T03:19:37Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -213,7 +213,7 @@
       "id": "z-image-turbo",
       "kind": "image",
       "name": "Z-Image Turbo",
-      "description": "Tongyi's distilled 6B text-to-image model, eight steps at cfg 1. Strong photorealism and bilingual (English/Chinese) text rendering, and runs in about 4 GB of VRAM at Q3_K. Apache-2.0, and every file is ungated, so no HF_TOKEN is needed.",
+      "description": "Tongyi's distilled 6B text-to-image model, eight steps at CFG 1, with strong photorealism and bilingual text rendering. On a 24 GB GPU run the bf16 weights with a Q8_0 or bf16 text encoder: the Q4 encoders used on smaller cards visibly flatten detail. Its output is soft at 1 MP by design, so the default adds a 1.5x hires detail pass (4x-UltraSharp, then 8 steps at 0.35 denoise) for crisp skin, hair and texture. Apache-2.0, ungated.",
       "reference": "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo",
       "tags": ["z-image", "fast", "distilled", "text-rendering", "apache-2.0"],
       "loadMode": "diffusion-model",
@@ -223,19 +223,34 @@
         "cfg_scale": 1,
         "width": 1024,
         "height": 1024,
-        "sampler": "euler"
+        "sampler": "euler",
+        "hires": {
+          "enabled": true,
+          "scale": 1.5,
+          "steps": 8,
+          "denoise": 0.35,
+          "upscaler": "4x-UltraSharp"
+        }
       },
       "components": [
         {
           "slot": "checkpoint",
           "label": "Diffusion model",
-          "description": "Q8_0 is visually indistinguishable from bf16; Q4_K holds up well; Q3_K and below trade visible detail for memory.",
+          "description": "bf16 is the reference; Q8_0 and int8 convrot are near-lossless at half the size. Q4 and below lose fine detail.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "leejet/Z-Image-Turbo-GGUF",
             "extensions": [".gguf"]
-          }
+          },
+          "alternatives": [
+            {
+              "repo": "Comfy-Org/z_image_turbo",
+              "path": "split_files/diffusion_models",
+              "include": ["z_image_turbo_bf16.safetensors", "z_image_turbo_int8_convrot.safetensors"]
+            }
+          ],
+          "recommended": "bf16"
         },
         {
           "slot": "vae",
@@ -254,14 +269,15 @@
           "slot": "clip",
           "role": "llm",
           "label": "Qwen3-4B-Instruct-2507 text encoder",
-          "description": "The 2507 instruct release, as the stable-diffusion.cpp docs use. Q4_K_M is ample for prompt encoding.",
+          "description": "Q8_0 or F16 on 24 GB. Q4 encoders cost prompt adherence and fine detail for 2 GB of savings.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
             "match": "Qwen3-4B-Instruct-2507",
             "extensions": [".gguf"]
-          }
+          },
+          "recommended": "Q8_0"
         }
       ]
     },
@@ -322,7 +338,7 @@
       "id": "qwen-image-2.1",
       "kind": "image",
       "name": "Qwen-Image 2.1",
-      "description": "Qwen's text-to-image and instruction-editing model, with Qwen3-VL-8B as its text encoder. Strong text rendering, and it can output transparent PNGs when the prompt asks for an RGBA image. Image sides must be multiples of 32. Q4_K runs in about 16 GB with CPU offload; editing also needs the vision projector.",
+      "description": "Qwen's text-to-image and instruction-editing model, top of the open-weights text-to-image and editing arenas. Qwen3-VL-8B text encoder; transparent PNGs when the prompt asks for an RGBA image; sides must be multiples of 32. On 24 GB run bf16 (14 GB) with a Q8_0 encoder: Q4 quantizations are what produce soft output and faint line artifacts. The default adds a 1.5x hires detail pass. The optional Viggle turbo LoRA samples in 6 steps at CFG 1, applied automatically when selected.",
       "reference": "https://github.com/leejet/stable-diffusion.cpp/blob/master/docs/qwen_image_2.1.md",
       "tags": ["qwen", "text-rendering", "edit", "alpha"],
       "loadMode": "diffusion-model",
@@ -332,19 +348,34 @@
         "cfg_scale": 6,
         "width": 1024,
         "height": 1024,
-        "sampler": "euler"
+        "sampler": "euler",
+        "hires": {
+          "enabled": true,
+          "scale": 1.5,
+          "steps": 12,
+          "denoise": 0.3,
+          "upscaler": "4x-UltraSharp"
+        }
       },
       "components": [
         {
           "slot": "checkpoint",
           "label": "Diffusion model",
-          "description": "Q6_K is close to bf16; Q4_K roughly halves the footprint.",
+          "description": "bf16 (14 GB) is the reference and fits 24 GB; int8 convrot and Q8_0 are close. Q6_K and below show artifacts.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "leejet/Qwen-Image-2.1-GGUF",
             "extensions": [".gguf"]
-          }
+          },
+          "alternatives": [
+            {
+              "repo": "Comfy-Org/Qwen-Image-2.1",
+              "path": "diffusion_models",
+              "include": ["qwen_image_2.1_bf16.safetensors", "qwen_image_2.1_int8_convrot.safetensors"]
+            }
+          ],
+          "recommended": "bf16"
         },
         {
           "slot": "vae",
@@ -363,14 +394,15 @@
           "slot": "clip",
           "role": "llm",
           "label": "Qwen3-VL-8B text encoder",
-          "description": "Q4_K_M is what the stable-diffusion.cpp docs use; Q8_0 for a little more prompt fidelity.",
+          "description": "Q8_0 for prompt fidelity; Q4_K_M only on small GPUs.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
             "match": "Qwen3VL-8B-Instruct",
             "extensions": [".gguf"]
-          }
+          },
+          "recommended": "Q8_0"
         },
         {
           "slot": "clip",
@@ -383,6 +415,19 @@
             "repo": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
             "match": "mmproj",
             "extensions": [".gguf"]
+          },
+          "recommended": "F16"
+        },
+        {
+          "slot": "lora",
+          "label": "Viggle turbo LoRA (6 steps)",
+          "description": "Six-step distillation at CFG 1: about 4x faster, slightly less detail. Pepper applies its schedule when it is selected.",
+          "required": false,
+          "quantizable": false,
+          "source": {
+            "repo": "Viggle/Qwen-Image-2.1-viggle-turbo",
+            "match": "v0.2.1-6step-lora-r128",
+            "extensions": [".safetensors"]
           }
         }
       ]
@@ -704,131 +749,6 @@
       ]
     },
     {
-      "id": "wan2.1-t2v-14b",
-      "kind": "video",
-      "name": "Wan 2.1 T2V 14B",
-      "description": "Text-to-video. Generates a short clip from a prompt; expect minutes per clip rather than seconds.",
-      "reference": "https://huggingface.co/Wan-AI/Wan2.1-T2V-14B",
-      "tags": ["wan", "text-to-video"],
-      "loadMode": "diffusion-model",
-      "mode": "video",
-      "defaults": {
-        "steps": 20,
-        "cfg_scale": 6,
-        "width": 832,
-        "height": 480,
-        "sampler": "euler",
-        "video_frames": 33,
-        "flow_shift": 3
-      },
-      "components": [
-        {
-          "slot": "checkpoint",
-          "label": "Diffusion model",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "city96/Wan2.1-T2V-14B-gguf",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "vae",
-          "label": "Wan autoencoder",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
-            "path": "split_files/vae",
-            "match": "wan_2.1_vae",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "UMT5-XXL text encoder",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
-            "path": "split_files/text_encoders",
-            "match": "umt5",
-            "extensions": [".safetensors"]
-          }
-        }
-      ]
-    },
-    {
-      "id": "wan2.1-i2v-14b-480p",
-      "kind": "video",
-      "name": "Wan 2.1 I2V 14B (480p)",
-      "description": "Image-to-video. Animates an uploaded still, supplied as the init image on a generation request.",
-      "reference": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P",
-      "tags": ["wan", "image-to-video"],
-      "loadMode": "diffusion-model",
-      "mode": "video",
-      "defaults": {
-        "steps": 20,
-        "cfg_scale": 6,
-        "width": 832,
-        "height": 480,
-        "sampler": "euler",
-        "video_frames": 33,
-        "flow_shift": 3
-      },
-      "components": [
-        {
-          "slot": "checkpoint",
-          "label": "Diffusion model",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "city96/Wan2.1-I2V-14B-480P-gguf",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "vae",
-          "label": "Wan autoencoder",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
-            "path": "split_files/vae",
-            "match": "wan_2.1_vae",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "UMT5-XXL text encoder",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
-            "path": "split_files/text_encoders",
-            "match": "umt5",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "clip_vision",
-          "label": "CLIP vision encoder",
-          "description": "Encodes the conditioning image. Required for image-to-video.",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
-            "path": "split_files/clip_vision",
-            "extensions": [".safetensors"]
-          }
-        }
-      ]
-    },
-    {
       "id": "wan2.2-s2v-14b",
       "kind": "video",
       "name": "Wan 2.2 S2V 14B",
@@ -944,39 +864,43 @@
         {
           "slot": "checkpoint",
           "label": "Diffusion model (Ref2VA)",
-          "description": "The packed audio-video diffusion transformer.",
+          "description": "The full Q4_K_M transformer; the pruned one saves 7 GB at a cost in motion and detail.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "leejet/MiniMax-H3-GGUF",
             "match": "ref2va",
             "extensions": [".gguf"]
-          }
+          },
+          "recommended": "ref2va-Q4_K_M"
         },
         {
           "slot": "clip",
           "role": "llm",
           "label": "Qwen3-VL-32B text encoder",
-          "description": "The MiniMax-H3 variant, truncated to 50 language layers. A stock Qwen3-VL will not load.",
+          "description": "The MiniMax-H3 variant, truncated to 50 language layers (a stock Qwen3-VL will not load). Q4_K_M or better: Q2 visibly degrades prompt following.",
           "required": true,
           "quantizable": true,
           "source": {
             "repo": "leejet/MiniMax-H3-GGUF",
             "match": "qwen3vl",
             "extensions": [".gguf"]
-          }
+          },
+          "recommended": "Q4_K_M"
         },
         {
           "slot": "vae",
           "label": "Video VAE",
           "required": true,
-          "quantizable": false,
+          "quantizable": true,
           "source": {
             "repo": "Comfy-Org/MiniMax-H3",
             "path": "vae",
             "match": "video_vae",
             "extensions": [".safetensors"]
-          }
+          },
+          "recommended": "fp16",
+          "description": "fp16 decodes cleaner frames than the int8 build; with CPU offload it fits 24 GB."
         },
         {
           "slot": "vae",
@@ -989,6 +913,626 @@
             "path": "vae",
             "match": "audio_vae",
             "extensions": [".safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "minimax-h3-fl2va",
+      "kind": "video",
+      "name": "MiniMax-H3 FL2VA",
+      "description": "Joint audio-video generation from text, a first frame, or first and last frames: the scene, its motion and a matching stereo soundtrack (speech, effects, music) in one pass. Runs at 24 fps; frame counts snap to 17k+5.",
+      "reference": "https://github.com/leejet/stable-diffusion.cpp/blob/master/docs/minimax_h3.md",
+      "tags": ["minimax", "audio-video", "t2v", "i2v", "flf2v"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 20,
+        "cfg_scale": 1,
+        "width": 864,
+        "height": 480,
+        "sampler": "euler",
+        "fps": 24,
+        "flow_shift": 12,
+        "video_frames": 107
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--rng", "cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model (FL2VA)",
+          "description": "The full Q4_K_M transformer; the pruned one saves 7 GB at a cost in motion and detail.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/MiniMax-H3-GGUF",
+            "match": "fl2va",
+            "extensions": [".gguf"]
+          },
+          "recommended": "fl2va-Q4_K_M"
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen3-VL-32B text encoder",
+          "description": "The MiniMax-H3 variant, truncated to 50 language layers (a stock Qwen3-VL will not load). Q4_K_M or better: Q2 visibly degrades prompt following.",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "leejet/MiniMax-H3-GGUF",
+            "match": "qwen3vl",
+            "extensions": [".gguf"]
+          },
+          "recommended": "Q4_K_M"
+        },
+        {
+          "slot": "vae",
+          "label": "Video VAE",
+          "required": true,
+          "quantizable": true,
+          "source": {
+            "repo": "Comfy-Org/MiniMax-H3",
+            "path": "vae",
+            "match": "video_vae",
+            "extensions": [".safetensors"]
+          },
+          "recommended": "fp16",
+          "description": "fp16 decodes cleaner frames than the int8 build; with CPU offload it fits 24 GB."
+        },
+        {
+          "slot": "vae",
+          "label": "Audio VAE",
+          "description": "Decodes the generated soundtrack. Without it the model still runs, but the video is silent.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/MiniMax-H3",
+            "path": "vae",
+            "match": "audio_vae",
+            "extensions": [".safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ltx-2.5-distilled",
+      "kind": "video",
+      "name": "LTX-2.5 Distilled (22B)",
+      "description": "Lightricks' 22B audio-video model, distilled to 8 steps at CFG 1: synchronized video and sound in one pass, the cheapest route to 720p on a 24 GB GPU. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue.",
+      "reference": "https://huggingface.co/Lightricks/LTX-2.5",
+      "tags": ["ltx", "audio-video", "t2v", "i2v", "distilled", "hires"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 8,
+        "cfg_scale": 1,
+        "width": 640,
+        "height": 352,
+        "sampler": "euler",
+        "fps": 24,
+        "video_frames": 121,
+        "hires": {
+          "enabled": true,
+          "scale": 2,
+          "upscaler": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0",
+          "sigmas": [0.85, 0.725, 0.421875, 0]
+        }
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "description": "Q6_K (18.6 GB) is the largest that leaves room for activations on 24 GB; Q8_0 needs more VRAM.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q6_K",
+          "source": {
+            "repo": "vantagewithai/LTX-2.5-GGUF",
+            "path": "distilled",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Gemma 4 12B text encoder (LTX-2.5)",
+          "description": "Gemma 4 fine-tuned for LTX-2.5 with its text projection built in; stock Gemma will not work. int8 convrot fits alongside the transformer.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "int8",
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "text_encoders",
+            "match": "gemma4-12b-with-proj",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Video VAE (conv)",
+          "description": "The conv decoder; stable-diffusion.cpp does not implement the diffusion decoder.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "vae",
+            "include": ["ltx-2.5-video-vae-conv-bf16.safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Audio VAE",
+          "description": "Decodes the generated soundtrack.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "vae",
+            "include": ["ltx-2.5-audio-vae-bf16.safetensors"]
+          }
+        },
+        {
+          "slot": "aux",
+          "label": "Latent spatial upscaler x2",
+          "description": "Used by the default hires pass to double the resolution in latent space.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "latent_upscale_models",
+            "include": ["ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ltx-2.5-dev",
+      "kind": "video",
+      "name": "LTX-2.5 Dev (22B)",
+      "description": "Lightricks' 22B audio-video model, full (non-distilled) weights at CFG 3: slower than the distilled model and a step up in detail and prompt following. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue.",
+      "reference": "https://huggingface.co/Lightricks/LTX-2.5",
+      "tags": ["ltx", "audio-video", "t2v", "i2v", "dev", "hires"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 30,
+        "cfg_scale": 3,
+        "width": 640,
+        "height": 352,
+        "sampler": "euler",
+        "fps": 24,
+        "video_frames": 121,
+        "negative_prompt": "worst quality, low quality, blurry, distorted, artifacts, jittery motion",
+        "hires": {
+          "enabled": true,
+          "scale": 2,
+          "upscaler": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0",
+          "sigmas": [0.85, 0.725, 0.421875, 0]
+        }
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "description": "Q6_K (18.6 GB) is the largest that leaves room for activations on 24 GB; Q8_0 needs more VRAM.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q6_K",
+          "source": {
+            "repo": "vantagewithai/LTX-2.5-GGUF",
+            "path": "dev",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Gemma 4 12B text encoder (LTX-2.5)",
+          "description": "Gemma 4 fine-tuned for LTX-2.5 with its text projection built in; stock Gemma will not work. int8 convrot fits alongside the transformer.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "int8",
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "text_encoders",
+            "match": "gemma4-12b-with-proj",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Video VAE (conv)",
+          "description": "The conv decoder; stable-diffusion.cpp does not implement the diffusion decoder.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "vae",
+            "include": ["ltx-2.5-video-vae-conv-bf16.safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Audio VAE",
+          "description": "Decodes the generated soundtrack.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "vae",
+            "include": ["ltx-2.5-audio-vae-bf16.safetensors"]
+          }
+        },
+        {
+          "slot": "aux",
+          "label": "Latent spatial upscaler x2",
+          "description": "Used by the default hires pass to double the resolution in latent space.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Lightricks/LTX-2.5",
+            "path": "latent_upscale_models",
+            "include": ["ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wan2.2-t2v-a14b",
+      "kind": "video",
+      "name": "Wan 2.2 T2V A14B",
+      "description": "Alibaba's 14B mixture-of-experts text-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0.",
+      "reference": "https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B",
+      "tags": ["wan", "t2v", "moe", "photoreal", "lightning", "apache-2.0"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 20,
+        "cfg_scale": 3.5,
+        "width": 832,
+        "height": 480,
+        "sampler": "euler",
+        "fps": 16,
+        "video_frames": 81,
+        "flow_shift": 5,
+        "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+        "loras": [
+          {
+            "name": "high_noise_model",
+            "weight": 1
+          },
+          {
+            "name": "low_noise_model",
+            "weight": 1
+          }
+        ]
+      },
+      "loraPresets": {
+        "high_noise_model": {
+          "steps": 4,
+          "cfg_scale": 1
+        },
+        "low_noise_model": {
+          "steps": 4,
+          "cfg_scale": 1
+        }
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "High-noise expert",
+          "description": "Runs the early, high-noise steps. Q8_0 is near-lossless; the experts load one at a time.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
+            "path": "HighNoise",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "checkpoint",
+          "label": "Low-noise expert",
+          "description": "Runs the late, detail steps.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
+            "path": "LowNoise",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan 2.1 VAE",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/vae",
+            "match": "wan_2.1_vae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "umt5-xxl text encoder",
+          "description": "fp16 for prompt fidelity; fp8 saves 5 GB.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "fp16",
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/text_encoders",
+            "match": "umt5",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "lora",
+          "label": "Lightning LoRA pair (4 steps)",
+          "description": "lightx2v's high- and low-noise distillation LoRAs; Pepper routes each to its expert.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "lightx2v/Wan2.2-Lightning",
+            "path": "Wan2.2-T2V-A14B-4steps-lora-rank64-Seko-V2.0",
+            "allFiles": true,
+            "include": ["*.safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wan2.2-i2v-a14b",
+      "kind": "video",
+      "name": "Wan 2.2 I2V A14B",
+      "description": "Alibaba's 14B mixture-of-experts image-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0.",
+      "reference": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B",
+      "tags": ["wan", "i2v", "moe", "photoreal", "lightning", "apache-2.0"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 20,
+        "cfg_scale": 3.5,
+        "width": 832,
+        "height": 480,
+        "sampler": "euler",
+        "fps": 16,
+        "video_frames": 81,
+        "flow_shift": 5,
+        "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+        "loras": [
+          {
+            "name": "high_noise_model",
+            "weight": 1
+          },
+          {
+            "name": "low_noise_model",
+            "weight": 1
+          }
+        ]
+      },
+      "loraPresets": {
+        "high_noise_model": {
+          "steps": 4,
+          "cfg_scale": 1
+        },
+        "low_noise_model": {
+          "steps": 4,
+          "cfg_scale": 1
+        }
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "High-noise expert",
+          "description": "Runs the early, high-noise steps. Q8_0 is near-lossless; the experts load one at a time.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
+            "path": "HighNoise",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "checkpoint",
+          "label": "Low-noise expert",
+          "description": "Runs the late, detail steps.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
+            "path": "LowNoise",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "Wan 2.1 VAE",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/vae",
+            "match": "wan_2.1_vae",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "umt5-xxl text encoder",
+          "description": "fp16 for prompt fidelity; fp8 saves 5 GB.",
+          "required": true,
+          "quantizable": true,
+          "recommended": "fp16",
+          "source": {
+            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+            "path": "split_files/text_encoders",
+            "match": "umt5",
+            "extensions": [".safetensors"]
+          }
+        },
+        {
+          "slot": "lora",
+          "label": "Lightning LoRA pair (4 steps)",
+          "description": "lightx2v's high- and low-noise distillation LoRAs; Pepper routes each to its expert.",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "lightx2v/Wan2.2-Lightning",
+            "path": "Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1",
+            "allFiles": true,
+            "include": ["*.safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "hunyuanvideo-1.5-t2v-720p",
+      "kind": "video",
+      "name": "HunyuanVideo 1.5 T2V 720p",
+      "description": "Tencent's 8.3B video model: natural motion and physics at 720p in a fraction of Wan's compute. Qwen2.5-VL-7B and a ByT5 glyph encoder condition it, so it renders on-screen text well. Frame counts are 4k+1. Apache-2.0-style Tencent Hunyuan license.",
+      "reference": "https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5",
+      "tags": ["hunyuan", "t2v", "720p"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 50,
+        "cfg_scale": 6,
+        "width": 1280,
+        "height": 720,
+        "sampler": "euler",
+        "fps": 24,
+        "video_frames": 121
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--vae-tiling"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/diffusion_models",
+            "include": ["hunyuanvideo1.5_720p_t2v_fp16.safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "HunyuanVideo 1.5 VAE",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/vae",
+            "include": ["hunyuanvideo15_vae_fp16.safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen2.5-VL-7B text encoder",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+            "match": "Qwen2.5-VL-7B-Instruct.",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "ByT5 Small GlyphXL (text rendering)",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/text_encoders",
+            "include": ["byt5_small_glyphxl_fp16.safetensors"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "hunyuanvideo-1.5-i2v-720p",
+      "kind": "video",
+      "name": "HunyuanVideo 1.5 I2V 720p",
+      "description": "Tencent's 8.3B video model: natural motion and physics at 720p in a fraction of Wan's compute. Qwen2.5-VL-7B and a ByT5 glyph encoder condition it, so it renders on-screen text well. This is the CFG-distilled I2V checkpoint: CFG 1, half the compute. Frame counts are 4k+1. Apache-2.0-style Tencent Hunyuan license.",
+      "reference": "https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5",
+      "tags": ["hunyuan", "i2v", "720p"],
+      "loadMode": "diffusion-model",
+      "mode": "video",
+      "defaults": {
+        "steps": 30,
+        "cfg_scale": 1,
+        "width": 1280,
+        "height": 720,
+        "sampler": "euler",
+        "fps": 24,
+        "video_frames": 121
+      },
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--vae-tiling"],
+      "components": [
+        {
+          "slot": "checkpoint",
+          "label": "Diffusion model",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/diffusion_models",
+            "include": ["hunyuanvideo1.5_720p_i2v_cfg_distilled_fp16.safetensors"]
+          }
+        },
+        {
+          "slot": "vae",
+          "label": "HunyuanVideo 1.5 VAE",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/vae",
+            "include": ["hunyuanvideo15_vae_fp16.safetensors"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "llm",
+          "label": "Qwen2.5-VL-7B text encoder",
+          "required": true,
+          "quantizable": true,
+          "recommended": "Q8_0",
+          "source": {
+            "repo": "mradermacher/Qwen2.5-VL-7B-Instruct-GGUF",
+            "match": "Qwen2.5-VL-7B-Instruct.",
+            "extensions": [".gguf"]
+          }
+        },
+        {
+          "slot": "clip",
+          "role": "t5xxl",
+          "label": "ByT5 Small GlyphXL (text rendering)",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "Comfy-Org/HunyuanVideo_1.5_repackaged",
+            "path": "split_files/text_encoders",
+            "include": ["byt5_small_glyphxl_fp16.safetensors"]
           }
         }
       ]
@@ -1219,234 +1763,49 @@
       ]
     },
     {
-      "id": "echomimic-v3",
-      "kind": "video",
-      "name": "EchoMimicV3 Flash",
-      "description": "1.3B audio-driven human animation: one reference image plus a speech clip becomes a talking, gesturing video (any length: the speech is rendered in overlapping ~3 s chunks, each seeded from the last, and stitched). The Flash release — 8 steps, no face mask needed. Runs through pepper's Python backend on CUDA or Apple Silicon; Apache-2.0.",
-      "reference": "https://huggingface.co/BadToBest/EchoMimicV3",
-      "tags": ["talking-head", "audio-driven", "human-animation", "python", "apache-2.0"],
-      "backend": "python",
-      "pythonRunner": "echomimic_v3",
-      "pythonPackage": "https://github.com/antgroup/echomimic_v3#7e89489ca51c0d008fc1963ec6c03fc5bd0b9397",
-      "mode": "video",
-      "capabilities": ["s2v"],
-      "s2v": {
-        "frames_per_chunk": 81,
-        "chunk_seconds": 3.24,
-        "overlap_seconds": 0.4,
-        "frame_grid": { "stride": 4, "offset": 1 },
-        "sample_rate": 16000,
-        "chain_frames": true
-      },
-      "defaults": {
-        "steps": 8,
-        "cfg_scale": 6,
-        "width": 512,
-        "height": 512,
-        "video_frames": 81,
-        "fps": 25
-      },
+      "id": "ace-step-1.5-turbo",
+      "kind": "audio",
+      "name": "ACE-Step 1.5 Turbo",
+      "description": "Full songs with vocals or instrumentals from a style prompt and lyrics ([Verse]/[Chorus] markers), 50+ languages, in seconds: the fastest open music model, with cover, repaint and continuation routes. MIT license, commercial use allowed.",
+      "reference": "https://github.com/ace-step/ACE-Step-1.5",
+      "tags": ["music", "songs", "lyrics", "fast", "mit"],
+      "family": "ace_step",
+      "task": "gen",
       "components": [
         {
-          "slot": "checkpoint",
-          "label": "EchoMimicV3 Flash transformer",
-          "description": "The audio-conditioned Wan 2.1 1.3B transformer, with its config.",
-          "required": true,
-          "source": {
-            "repo": "BadToBest/EchoMimicV3",
-            "path": "echomimicv3-flash-pro",
-            "allFiles": true,
-            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
-          }
-        },
-        {
-          "slot": "vae",
-          "label": "Wan 2.1 VAE",
-          "required": true,
-          "source": {
-            "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP",
-            "match": "Wan2.1_VAE",
-            "extensions": [".pth"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "umt5-xxl text encoder",
-          "description": "GGUF instead of upstream's 11 GB .pth: the same encoder, loaded and freed before sampling. Q3_K_S is ample for prompt encoding.",
+          "slot": "weights",
+          "label": "Model",
           "required": true,
           "quantizable": true,
+          "recommended": "bf16",
           "source": {
-            "repo": "city96/umt5-xxl-encoder-gguf",
+            "repo": "audio-cpp/audio.cpp-gguf",
+            "path": "ACE-Step1.5-GGUF/turbo",
             "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "other:tokenizer",
-          "label": "umt5-xxl tokenizer",
-          "required": true,
-          "source": {
-            "repo": "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP",
-            "path": "google/umt5-xxl",
-            "allFiles": true,
-            "include": ["spiece.model", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
-          }
-        },
-        {
-          "slot": "other:image_encoder",
-          "label": "CLIP ViT-H/14 image encoder",
-          "description": "The visual tower only (1.3 GB) instead of upstream's 4.8 GB open-clip checkpoint.",
-          "required": true,
-          "source": {
-            "repo": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
-            "path": "image_encoder",
-            "allFiles": true,
-            "include": ["config.json", "model.safetensors"]
-          }
-        },
-        {
-          "slot": "other:wav2vec",
-          "label": "chinese-wav2vec2-base audio encoder",
-          "description": "The Flash release's audio encoder (the preview model used wav2vec2-base-960h).",
-          "required": true,
-          "source": {
-            "repo": "TencentGameMate/chinese-wav2vec2-base",
-            "allFiles": true,
-            "include": ["config.json", "preprocessor_config.json", "pytorch_model.bin"]
           }
         }
       ]
     },
     {
-      "id": "wan2.2-ti2v-5b-turbo",
-      "kind": "video",
-      "name": "Wan 2.2 TI2V-5B Turbo",
-      "description": "The best quality per gigabyte of the small video models: text-to-video and image-to-video from one 5B model, distilled to 4 steps at cfg 1. Runs through pepper's Python backend (diffusers) on CUDA or Apple Silicon; roughly 5 minutes for 2 seconds at 704x512 on a 24 GB M4. Keep the short side at 512 or more — it mangles faces below that. Apache-2.0.",
-      "reference": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B",
-      "tags": ["wan", "t2v", "i2v", "fast", "python", "apache-2.0"],
-      "backend": "python",
-      "pythonRunner": "wan22_ti2v",
-      "mode": "video",
-      "defaults": {
-        "steps": 4,
-        "cfg_scale": 1,
-        "width": 704,
-        "height": 512,
-        "video_frames": 49,
-        "fps": 24
-      },
+      "id": "heartmula",
+      "kind": "audio",
+      "name": "HeartMuLa",
+      "description": "A music language model for complete songs from lyrics and comma-separated style tags, with the strongest lyric control among open models and multilingual singing. Slower than ACE-Step. Apache-2.0.",
+      "reference": "https://github.com/HeartMuLa/heartlib",
+      "tags": ["music", "songs", "lyrics", "multilingual", "apache-2.0"],
+      "family": "heartmula",
+      "task": "gen",
       "components": [
         {
-          "slot": "checkpoint",
-          "label": "Wan 2.2 TI2V-5B Turbo transformer",
-          "description": "Q5_K_M is the measured sweet spot; diffusers keeps it quantized in memory.",
+          "slot": "weights",
+          "label": "Model",
           "required": true,
           "quantizable": true,
+          "recommended": "f16",
           "source": {
-            "repo": "hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF",
+            "repo": "audio-cpp/audio.cpp-gguf",
+            "path": "HeartMuLa-GGUF",
             "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "umt5-xxl text encoder",
-          "description": "Loaded, used for the prompt and freed before sampling. Q3_K_S is ample.",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "city96/umt5-xxl-encoder-gguf",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "vae",
-          "label": "Wan 2.2 VAE",
-          "description": "The 16x-compression 2.2 VAE, in diffusers format (no single-file converter exists for it).",
-          "required": true,
-          "source": {
-            "repo": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
-            "path": "vae",
-            "allFiles": true,
-            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
-          }
-        },
-        {
-          "slot": "other:tokenizer",
-          "label": "umt5-xxl tokenizer",
-          "required": true,
-          "source": {
-            "repo": "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
-            "path": "tokenizer",
-            "allFiles": true,
-            "include": ["spiece.model", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
-          }
-        }
-      ]
-    },
-    {
-      "id": "ltx-video-2b-distilled",
-      "kind": "video",
-      "name": "LTX-Video 0.9.8 2B distilled",
-      "description": "The fastest small video model: text-to-video and image-to-video with Lightricks' distilled multi-scale recipe (7 steps at half size, a 2x latent upsample, 3 refining steps). About 3 minutes for 97 frames at 768x512 on a 24 GB M4; weaker than Wan 2.2 5B at holding detail on image-to-video. Runs through pepper's Python backend. LTX open-weights licence.",
-      "reference": "https://huggingface.co/Lightricks/LTX-Video",
-      "tags": ["ltx", "t2v", "i2v", "fast", "python"],
-      "backend": "python",
-      "pythonRunner": "ltx_video",
-      "mode": "video",
-      "defaults": {
-        "steps": 10,
-        "cfg_scale": 1,
-        "width": 768,
-        "height": 512,
-        "video_frames": 97,
-        "fps": 24
-      },
-      "components": [
-        {
-          "slot": "checkpoint",
-          "label": "LTX-Video 2B 0.9.8 distilled",
-          "description": "Transformer and VAE in one file. The fp8 variant is CUDA-only.",
-          "required": true,
-          "source": {
-            "repo": "Lightricks/LTX-Video",
-            "match": "ltxv-2b-0.9.8-distilled.safetensors",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "T5-XXL text encoder",
-          "description": "Loaded, used for the prompt and freed before sampling.",
-          "required": true,
-          "quantizable": true,
-          "source": {
-            "repo": "city96/t5-v1_1-xxl-encoder-gguf",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "other:tokenizer",
-          "label": "T5 tokenizer",
-          "required": true,
-          "source": {
-            "repo": "Lightricks/LTX-Video-0.9.5",
-            "path": "tokenizer",
-            "allFiles": true,
-            "include": ["spiece.model", "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json"]
-          }
-        },
-        {
-          "slot": "other:upsampler",
-          "label": "Spatial latent upsampler",
-          "description": "Enables the multi-scale pass. Without it, generation is single-pass: faster and softer.",
-          "required": false,
-          "source": {
-            "repo": "Lightricks/ltxv-spatial-upscaler-0.9.7",
-            "path": "latent_upsampler",
-            "allFiles": true,
-            "include": ["config.json", "diffusion_pytorch_model.safetensors"]
           }
         }
       ]
