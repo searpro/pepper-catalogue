@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-30T03:19:37Z",
+  "updatedAt": "2026-09-30T07:56:32Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -1182,180 +1182,54 @@
       ]
     },
     {
-      "id": "wan2.2-t2v-a14b",
-      "kind": "video",
-      "name": "Wan 2.2 T2V A14B",
-      "description": "Alibaba's 14B mixture-of-experts text-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0. Sized for 46 GB of system RAM, the usual 24 GB pod: with CPU offload the whole weight set lives in RAM.",
-      "reference": "https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B",
-      "tags": ["wan", "t2v", "moe", "photoreal", "lightning", "apache-2.0"],
-      "loadMode": "diffusion-model",
-      "mode": "video",
-      "defaults": {
-        "steps": 20,
-        "cfg_scale": 3.5,
-        "width": 832,
-        "height": 480,
-        "sampler": "euler",
-        "fps": 16,
-        "video_frames": 81,
-        "flow_shift": 5,
-        "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
-        "loras": [
-          {
-            "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise",
-            "weight": 1
-          },
-          {
-            "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise",
-            "weight": 1
-          }
-        ]
-      },
-      "loraPresets": {
-        "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise": {
-          "steps": 4,
-          "cfg_scale": 1
-        },
-        "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise": {
-          "steps": 4,
-          "cfg_scale": 1
-        }
-      },
-      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
-      "components": [
-        {
-          "slot": "checkpoint",
-          "label": "High-noise expert",
-          "description": "Runs the early, high-noise steps. Q6_K for both experts fits 46 GB of RAM alongside the encoder and LoRAs; Q8_0 needs a host with more.",
-          "required": true,
-          "quantizable": true,
-          "recommended": "Q6_K",
-          "source": {
-            "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
-            "path": "HighNoise",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "checkpoint",
-          "label": "Low-noise expert",
-          "description": "Runs the late, detail steps.",
-          "required": true,
-          "quantizable": true,
-          "recommended": "Q6_K",
-          "source": {
-            "repo": "QuantStack/Wan2.2-T2V-A14B-GGUF",
-            "path": "LowNoise",
-            "extensions": [".gguf"]
-          }
-        },
-        {
-          "slot": "vae",
-          "label": "Wan 2.1 VAE",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
-            "path": "split_files/vae",
-            "match": "wan_2.1_vae",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "clip",
-          "role": "t5xxl",
-          "label": "umt5-xxl text encoder",
-          "description": "fp8 keeps the set inside 46 GB of RAM; fp16 on hosts with more.",
-          "required": true,
-          "quantizable": true,
-          "recommended": "fp8",
-          "source": {
-            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
-            "path": "split_files/text_encoders",
-            "match": "umt5",
-            "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "lora",
-          "label": "Lightning LoRA pair (4 steps)",
-          "description": "lightx2v's 4-step distillation LoRAs (Comfy-Org's repackaged copies, the ones stable-diffusion.cpp documents); Pepper routes each to its expert.",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
-            "path": "split_files/loras",
-            "allFiles": true,
-            "include": ["wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors", "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors"]
-          }
-        }
-      ]
-    },
-    {
       "id": "wan2.2-i2v-a14b",
       "kind": "video",
-      "name": "Wan 2.2 I2V A14B",
-      "description": "Alibaba's 14B mixture-of-experts image-to-video model, the open-weights leader for photoreal people and camera motion. Two experts (high-noise and low-noise) sample in turn. Ships with the lightx2v Lightning LoRA pair, on by default: 4 steps at CFG 1, about 10x faster; send loras: [] for the full 20-step model. 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0. Sized for 46 GB of system RAM, the usual 24 GB pod: with CPU offload the whole weight set lives in RAM.",
+      "name": "Wan 2.2 I2V A14B (Lightning, merged)",
+      "description": "Alibaba's 14B mixture-of-experts image-to-video model, the open-weights leader for photoreal people and camera motion, with lightx2v's 4-step Lightning distillation merged into both experts: 2 high-noise + 2 low-noise steps at CFG 1. Merged rather than applied as LoRAs because stable-diffusion.cpp's runtime LoRA path does not yet work on the two-expert model. Animate a Z-Image or Qwen-Image still; 832x480 at 16 fps, 81 frames; finish with a SeedVR2 upscale for 1080p. Apache-2.0. Sized for 46 GB of system RAM, the usual 24 GB pod: with CPU offload the whole weight set lives in RAM.",
       "reference": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B",
       "tags": ["wan", "i2v", "moe", "photoreal", "lightning", "apache-2.0"],
       "loadMode": "diffusion-model",
       "mode": "video",
       "defaults": {
-        "steps": 20,
-        "cfg_scale": 3.5,
+        "steps": 2,
+        "cfg_scale": 1,
         "width": 832,
         "height": 480,
         "sampler": "euler",
         "fps": 16,
         "video_frames": 81,
         "flow_shift": 5,
-        "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
-        "loras": [
-          {
-            "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise",
-            "weight": 1
-          },
-          {
-            "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise",
-            "weight": 1
-          }
-        ]
-      },
-      "loraPresets": {
-        "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise": {
-          "steps": 4,
-          "cfg_scale": 1
-        },
-        "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise": {
-          "steps": 4,
+        "sigmas": [1.0, 0.9375, 0.8333, 0.625, 0.0],
+        "high_noise": {
+          "steps": 2,
           "cfg_scale": 1
         }
       },
-      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"],
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu", "--vae-tiling"],
       "components": [
         {
           "slot": "checkpoint",
           "label": "High-noise expert",
-          "description": "Runs the early, high-noise steps. Q6_K for both experts fits 46 GB of RAM alongside the encoder and LoRAs; Q8_0 needs a host with more.",
+          "description": "Runs the early, high-noise steps. The 260412 720p Lightning merge; Q6_K for both experts fits 46 GB of RAM.",
           "required": true,
           "quantizable": true,
           "recommended": "Q6_K",
           "source": {
-            "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
-            "path": "HighNoise",
+            "repo": "jayn7/WAN2.2-I2V_A14B-DISTILL-LIGHTX2V-4STEP-GGUF",
+            "path": "high_noise_260412",
             "extensions": [".gguf"]
           }
         },
         {
           "slot": "checkpoint",
           "label": "Low-noise expert",
-          "description": "Runs the late, detail steps.",
+          "description": "Runs the late, detail steps. The 260412 720p Lightning merge; Q6_K for both experts fits 46 GB of RAM.",
           "required": true,
           "quantizable": true,
           "recommended": "Q6_K",
           "source": {
-            "repo": "QuantStack/Wan2.2-I2V-A14B-GGUF",
-            "path": "LowNoise",
+            "repo": "jayn7/WAN2.2-I2V_A14B-DISTILL-LIGHTX2V-4STEP-GGUF",
+            "path": "low_noise_260412",
             "extensions": [".gguf"]
           }
         },
@@ -1384,19 +1258,6 @@
             "path": "split_files/text_encoders",
             "match": "umt5",
             "extensions": [".safetensors"]
-          }
-        },
-        {
-          "slot": "lora",
-          "label": "Lightning LoRA pair (4 steps)",
-          "description": "lightx2v's 4-step distillation LoRAs (Comfy-Org's repackaged copies, the ones stable-diffusion.cpp documents); Pepper routes each to its expert.",
-          "required": true,
-          "quantizable": false,
-          "source": {
-            "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
-            "path": "split_files/loras",
-            "allFiles": true,
-            "include": ["wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors", "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"]
           }
         }
       ]
