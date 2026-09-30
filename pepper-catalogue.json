@@ -213,7 +213,7 @@
       "id": "z-image-turbo",
       "kind": "image",
       "name": "Z-Image Turbo",
-      "description": "Tongyi's distilled 6B text-to-image model, eight steps at CFG 1, with strong photorealism and bilingual text rendering. On a 24 GB GPU run the bf16 weights with a Q8_0 or bf16 text encoder: the Q4 encoders used on smaller cards visibly flatten detail. Its output is soft at 1 MP by design, so the default adds a 1.5x hires detail pass (4x-UltraSharp, then 8 steps at 0.35 denoise) for crisp skin, hair and texture. Apache-2.0, ungated.",
+      "description": "Tongyi's distilled 6B text-to-image model, eight steps at CFG 1, with strong photorealism and bilingual text rendering. On a 24 GB GPU run the bf16 weights with a Q8_0 or bf16 text encoder: the Q4 encoders used on smaller cards visibly flatten detail. Its output is soft at 1 MP by design, so the default adds a 1.5x hires detail pass (4x-UltraSharp, then 8 steps at 0.3 denoise) for crisp skin, hair and texture. Apache-2.0, ungated.",
       "reference": "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo",
       "tags": ["z-image", "fast", "distilled", "text-rendering", "apache-2.0"],
       "loadMode": "diffusion-model",
@@ -228,7 +228,7 @@
           "enabled": true,
           "scale": 1.5,
           "steps": 8,
-          "denoise": 0.35,
+          "denoise": 0.3,
           "upscaler": "4x-UltraSharp"
         }
       },
@@ -279,7 +279,8 @@
           },
           "recommended": "Q8_0"
         }
-      ]
+      ],
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"]
     },
     {
       "id": "qwen-image-gguf",
@@ -338,7 +339,7 @@
       "id": "qwen-image-2.1",
       "kind": "image",
       "name": "Qwen-Image 2.1",
-      "description": "Qwen's text-to-image and instruction-editing model, top of the open-weights text-to-image and editing arenas. Qwen3-VL-8B text encoder; transparent PNGs when the prompt asks for an RGBA image; sides must be multiples of 32. On 24 GB run bf16 (14 GB) with a Q8_0 encoder: Q4 quantizations are what produce soft output and faint line artifacts. The default adds a 1.5x hires detail pass. The optional Viggle turbo LoRA samples in 6 steps at CFG 1, applied automatically when selected.",
+      "description": "Qwen's text-to-image and instruction-editing model, top of the open-weights text-to-image and editing arenas. Qwen3-VL-8B text encoder; transparent PNGs when the prompt asks for an RGBA image; sides must be multiples of 32. On 24 GB run bf16 (14 GB) with a Q8_0 encoder: Q4 quantizations are what produce soft output and faint line artifacts. The default adds a 1.5x hires detail pass, which also removes the faint 8 px striping stable-diffusion.cpp leaves on 1 MP Qwen output. The optional Viggle turbo LoRA samples in 6 steps at CFG 1, applied automatically when selected (without the hires pass, which overcooks turbo output).",
       "reference": "https://github.com/leejet/stable-diffusion.cpp/blob/master/docs/qwen_image_2.1.md",
       "tags": ["qwen", "text-rendering", "edit", "alpha"],
       "loadMode": "diffusion-model",
@@ -352,7 +353,7 @@
         "hires": {
           "enabled": true,
           "scale": 1.5,
-          "steps": 12,
+          "steps": 6,
           "denoise": 0.3,
           "upscaler": "4x-UltraSharp"
         }
@@ -430,7 +431,8 @@
             "extensions": [".safetensors"]
           }
         }
-      ]
+      ],
+      "extraArgs": ["--diffusion-fa", "--offload-to-cpu"]
     },
     {
       "id": "mage-flow",
@@ -1806,6 +1808,30 @@
             "repo": "audio-cpp/audio.cpp-gguf",
             "path": "HeartMuLa-GGUF",
             "extensions": [".gguf"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "yue2-3b",
+      "kind": "audio",
+      "name": "YuE2 3B",
+      "description": "m-a-p's song model: plans melody and chords from the style and lyrics, then sings and arranges full 48 kHz stereo songs of several minutes (English and Mandarin). Tops SongBench among open models, above ACE-Step 1.5 and Suno v5; a 3.6-minute song takes about 70 s in 11 GB on a 4090. Runs in its own Python environment, built on first use. CC BY-NC 4.0: non-commercial use only.",
+      "reference": "https://huggingface.co/m-a-p/YuE2-3B",
+      "tags": ["music", "songs", "lyrics", "best-quality", "non-commercial"],
+      "backend": "python",
+      "pythonRunner": "yue2",
+      "task": "gen",
+      "components": [
+        {
+          "slot": "weights",
+          "label": "YuE2 3B",
+          "required": true,
+          "quantizable": false,
+          "source": {
+            "repo": "m-a-p/YuE2-3B",
+            "allFiles": true,
+            "include": ["model.safetensors", "config.json", "generation_config.json", "modeling_yue2.py", "qwen.tiktoken", "weights_manifest.json", "yue2_generation_config.json"]
           }
         }
       ]

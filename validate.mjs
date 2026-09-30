@@ -23,7 +23,7 @@ const KINDS = new Set(['image', 'video', 'audio', 'llm']);
 const KNOWN_SLOTS = new Set(['checkpoint', 'vae', 'clip', 'lora', 'weights', 'aux']);
 const CLIP_ROLES = new Set(['clip_l', 'clip_g', 'clip_vision', 't5xxl', 'llm', 'llm_vision']);
 const BACKENDS = new Set(['sdcpp', 'llamacpp', 'audiocpp', 'python', 'vllm']);
-const PYTHON_RUNNERS = new Set(['wan22_ti2v', 'ltx_video', 'echomimic_v3']);
+const PYTHON_RUNNERS = new Set(['wan22_ti2v', 'ltx_video', 'echomimic_v3', 'seedvr2', 'yue2']);
 
 const live = process.argv.includes('--live');
 const errors = [];
@@ -57,8 +57,11 @@ for (const model of catalogue.models) {
 
   // audio.cpp cannot register a bundle without these, and neither is derivable
   // from the files, so an audio entry missing them installs something unusable.
+  // A Python-runner audio model (YuE2) is not audio.cpp's and needs no family.
   if (model.kind === 'audio') {
-    if (!model.family) fail(where, 'audio models must declare "family" (audio.cpp model_specs/<family>.json)');
+    if (!model.family && model.backend !== 'python') {
+      fail(where, 'audio models must declare "family" (audio.cpp model_specs/<family>.json)');
+    }
     if (!model.task) fail(where, 'audio models must declare "task" (tts | asr | …)');
   }
 
