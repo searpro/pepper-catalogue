@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-24T18:00:00Z",
+  "updatedAt": "2026-09-30T01:48:05Z",
   "models": [
     {
       "id": "flux1-schnell-gguf",
@@ -840,6 +840,7 @@
       "capabilities": ["s2v"],
       "s2v": {
         "audio_flag": "--ref-audio",
+        "audio_encoder_flag": "--audio-encoder",
         "chain_flag": "-i",
         "frames_per_chunk": 81,
         "chunk_seconds": 5,
@@ -1110,7 +1111,7 @@
       "reference": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
       "tags": ["tts", "voice-cloning", "expressive"],
       "family": "chatterbox",
-      "task": "tts",
+      "task": "clon",
       "components": [
         {
           "slot": "weights",
@@ -1129,11 +1130,11 @@
       "id": "qwen3-tts-voicedesign",
       "kind": "audio",
       "name": "Qwen3-TTS VoiceDesign 1.7B",
-      "description": "Voice design: synthesises a speaker from a natural-language description of the voice, rather than from a reference clip. Also does 3-second cloning.",
+      "description": "Voice design: synthesises a speaker from a natural-language description of the voice, rather than from a reference clip.",
       "reference": "https://huggingface.co/audio-cpp/audio.cpp-gguf",
-      "tags": ["tts", "voice-design", "voice-cloning"],
+      "tags": ["tts", "voice-design"],
       "family": "qwen3_tts",
-      "task": "tts",
+      "task": "vdes",
       "components": [
         {
           "slot": "weights",
