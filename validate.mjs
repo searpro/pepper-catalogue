@@ -154,6 +154,7 @@ if (live) await checkLive();
 report();
 
 async function checkLive() {
+  const gatedChecked = new Map();
   // The same filters the server applies, so this reports what a user would
   // actually be offered rather than the raw file list.
   const SHARD_RE = /-\d{5}-of-\d{5}\.[a-z]+$/;
@@ -179,7 +180,6 @@ async function checkLive() {
     }
   }
 
-  const gatedChecked = new Map();
   async function liveFiles(cw, component, source) {
       if (source.url || !source.repo) return source.url ? [source.url.split('/').pop()] : [];
 
