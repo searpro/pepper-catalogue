@@ -1000,7 +1000,7 @@
       "id": "ltx-2.5-distilled",
       "kind": "video",
       "name": "LTX-2.5 Distilled (22B)",
-      "description": "Lightricks' 22B audio-video model, distilled to 8 steps at CFG 1: synchronized video and sound in one pass, the cheapest route to 720p on a 24 GB GPU. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue.",
+      "description": "Lightricks' 22B audio-video model, distilled to 8 steps at CFG 1: synchronized video and sound in one pass, the cheapest route to 720p on a 24 GB GPU. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue. Files come from comfyicu/LTX-2.5, an ungated copy of the official Lightricks/LTX-2.5 repo, which requires accepting the licence and an HF token.",
       "reference": "https://huggingface.co/Lightricks/LTX-2.5",
       "tags": ["ltx", "audio-video", "t2v", "i2v", "distilled", "hires"],
       "loadMode": "diffusion-model",
@@ -1044,7 +1044,7 @@
           "quantizable": true,
           "recommended": "int8",
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "text_encoders",
             "match": "gemma4-12b-with-proj",
             "extensions": [".safetensors"]
@@ -1057,7 +1057,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "vae",
             "include": ["ltx-2.5-video-vae-conv-bf16.safetensors"]
           }
@@ -1069,7 +1069,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "vae",
             "include": ["ltx-2.5-audio-vae-bf16.safetensors"]
           }
@@ -1081,7 +1081,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "latent_upscale_models",
             "include": ["ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"]
           }
@@ -1092,7 +1092,7 @@
       "id": "ltx-2.5-dev",
       "kind": "video",
       "name": "LTX-2.5 Dev (22B)",
-      "description": "Lightricks' 22B audio-video model, full (non-distilled) weights at CFG 3: slower than the distilled model and a step up in detail and prompt following. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue.",
+      "description": "Lightricks' 22B audio-video model, full (non-distilled) weights at CFG 3: slower than the distilled model and a step up in detail and prompt following. Renders at 640x352, then the x2 latent spatial upscaler and a short refine pass bring it to 1280x704 (hires). Frame counts are 8k+1 (121 = 5 s at 24 fps). LTX-2.x Community License: free for organizations under $10M revenue. Files come from comfyicu/LTX-2.5, an ungated copy of the official Lightricks/LTX-2.5 repo, which requires accepting the licence and an HF token.",
       "reference": "https://huggingface.co/Lightricks/LTX-2.5",
       "tags": ["ltx", "audio-video", "t2v", "i2v", "dev", "hires"],
       "loadMode": "diffusion-model",
@@ -1137,7 +1137,7 @@
           "quantizable": true,
           "recommended": "int8",
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "text_encoders",
             "match": "gemma4-12b-with-proj",
             "extensions": [".safetensors"]
@@ -1150,7 +1150,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "vae",
             "include": ["ltx-2.5-video-vae-conv-bf16.safetensors"]
           }
@@ -1162,7 +1162,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "vae",
             "include": ["ltx-2.5-audio-vae-bf16.safetensors"]
           }
@@ -1174,7 +1174,7 @@
           "required": true,
           "quantizable": false,
           "source": {
-            "repo": "Lightricks/LTX-2.5",
+            "repo": "comfyicu/LTX-2.5",
             "path": "latent_upscale_models",
             "include": ["ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"]
           }
